@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import { connectDB } from "./config/database.js";
 import User from "../models/users.js";
+import mongoose from "mongoose";
 
 dotenv.config();
 
@@ -27,6 +28,49 @@ app.post("/api/users", async (req, res) => {
         res.status(500).json({ success: false, message: "Failed to create user"});
     }
 });
+
+// Delete
+app.delete("/api/users/:id", async (req, res) => {
+    const { id } = req.params;
+    console.log("id", id);
+
+    try {
+        await User.findByIdAndDelete(id);
+        res.status(200).json({ success: true, message: "User deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting user:", error.message);
+        res.status(500).json({ success: false, message: "Failed to delete user"});
+    }
+});
+
+// Get
+app.get("/api/users", async (req, res) => {
+    try {
+        const users = await User.find({});
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error("Error fetching users:", error.message);
+        res.status(500).json({ success: false, message: "Failed to fetch users"});
+    }
+});
+
+// Update
+app.put("/api/users/:id", async (req, res) => {
+    const { id } = req.params;
+    const user = req.body;
+
+    if(!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ success: false, message: "Invalid user ID"});
+    }
+
+    try {
+        const updatedUser = await User.findByIdAndUpdate(id, user, { new: true });
+        res.status(200).json({ success: true, message: "User updated successfully", user: updatedUser });
+    } catch (error) {
+        console.error("Error updating user:", error.message);
+        res.status(500).json({ success: false, message: "Failed to update user"});
+    }
+}); 
 
 app.listen(5000, () => {
     connectDB();
