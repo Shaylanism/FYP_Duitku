@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from './contexts/AuthContext';
 
 const API_URL = '/api/users'; // Proxy to backend
 
@@ -9,6 +10,7 @@ function UserManagement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
+  const { user, logout } = useAuth();
 
   // Fetch users
   const fetchUsers = async () => {
@@ -71,9 +73,33 @@ function UserManagement() {
     setLoading(false);
   };
 
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
-    <div style={{ maxWidth: 600, margin: '2rem auto', padding: 20, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #eee' }}>
-      <h2>User Management</h2>
+    <div style={{ maxWidth: 800, margin: '2rem auto', padding: 20, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #eee' }}>
+      {/* Header with user info and logout */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #eee' }}>
+        <div>
+          <h2 style={{ margin: 0 }}>User Management</h2>
+          <p style={{ margin: '4px 0 0 0', color: '#666' }}>Welcome back, {user?.name}</p>
+        </div>
+        <button 
+          onClick={handleLogout}
+          style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#dc3545', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: 'pointer' 
+          }}
+        >
+          Logout
+        </button>
+      </div>
+
       <form onSubmit={handleSubmit} style={{ marginBottom: 24 }}>
         <input
           name="name"
@@ -81,7 +107,7 @@ function UserManagement() {
           value={form.name}
           onChange={handleChange}
           required
-          style={{ marginRight: 8 }}
+          style={{ marginRight: 8, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
         />
         <input
           name="email"
@@ -89,43 +115,92 @@ function UserManagement() {
           value={form.email}
           onChange={handleChange}
           required
-          style={{ marginRight: 8 }}
+          style={{ marginRight: 8, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
         />
-        <button type="submit" disabled={loading}>
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#007bff', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.7 : 1
+          }}
+        >
           {editing ? 'Update' : 'Add'} User
         </button>
         {editing && (
-          <button type="button" onClick={() => { setForm({ name: '', email: '', id: null }); setEditing(false); }} style={{ marginLeft: 8 }}>
+          <button 
+            type="button" 
+            onClick={() => { setForm({ name: '', email: '', id: null }); setEditing(false); }} 
+            style={{ 
+              marginLeft: 8, 
+              padding: '8px 16px', 
+              backgroundColor: '#6c757d', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer' 
+            }}
+          >
             Cancel
           </button>
         )}
       </form>
-      {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
+      {error && <div style={{ color: 'red', marginBottom: 12, padding: '8px', backgroundColor: '#fee', borderRadius: '4px' }}>{error}</div>}
       {loading ? (
-        <div>Loading...</div>
+        <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>Name</th>
-              <th style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>Email</th>
-              <th style={{ borderBottom: '1px solid #ccc' }}>Actions</th>
+              <th style={{ borderBottom: '2px solid #dee2e6', textAlign: 'left', padding: '12px 8px' }}>Name</th>
+              <th style={{ borderBottom: '2px solid #dee2e6', textAlign: 'left', padding: '12px 8px' }}>Email</th>
+              <th style={{ borderBottom: '2px solid #dee2e6', textAlign: 'center', padding: '12px 8px' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user._id}>
-                <td>{user.name}</td>
-                <td>{user.email}</td>
-                <td>
-                  <button onClick={() => handleEdit(user)} style={{ marginRight: 8 }}>Edit</button>
-                  <button onClick={() => handleDelete(user._id)} style={{ color: 'red' }}>Delete</button>
+              <tr key={user._id} style={{ borderBottom: '1px solid #f8f9fa' }}>
+                <td style={{ padding: '12px 8px' }}>{user.name}</td>
+                <td style={{ padding: '12px 8px' }}>{user.email}</td>
+                <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                  <button 
+                    onClick={() => handleEdit(user)} 
+                    style={{ 
+                      marginRight: 8, 
+                      padding: '4px 12px', 
+                      backgroundColor: '#ffc107', 
+                      color: '#212529', 
+                      border: 'none', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(user._id)} 
+                    style={{ 
+                      padding: '4px 12px', 
+                      backgroundColor: '#dc3545', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan="3" style={{ textAlign: 'center', color: '#888' }}>No users found.</td>
+                <td colSpan="3" style={{ textAlign: 'center', color: '#888', padding: '20px' }}>No users found.</td>
               </tr>
             )}
           </tbody>
