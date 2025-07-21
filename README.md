@@ -1,6 +1,6 @@
-# FYP_Duitku - User Management System
+# FYP_Duitku - Personal Finance Tracker
 
-A full-stack web application built with **MERN stack** following **MVC architectural pattern**.
+A full-stack web application built with **MERN stack** following **MVC architectural pattern** for tracking personal income and expenses.
 
 ## 🏗️ Architecture
 
@@ -15,14 +15,17 @@ FYP_Duitku/
 │   │   └── database.js         # MongoDB connection
 │   ├── controllers/            # 🎮 Controllers - Business logic
 │   │   ├── AuthController.js   # Authentication logic
-│   │   └── UserController.js   # User management logic
+│   │   ├── UserController.js   # User management logic
+│   │   └── TransactionController.js # Transaction management logic
 │   ├── middleware/             # Express middleware
 │   │   └── auth.js            # JWT authentication middleware
 │   ├── models/                 # 📊 Models - Data layer
-│   │   └── User.js            # User model with Mongoose
+│   │   ├── User.js            # User model with Mongoose
+│   │   └── Transaction.js     # Transaction model with Mongoose
 │   ├── routes/                 # 🛣️ Routes - API endpoints
 │   │   ├── authRoutes.js      # Auth routes (thin)
-│   │   └── userRoutes.js      # User routes (thin)
+│   │   ├── userRoutes.js      # User routes (thin)
+│   │   └── transactionRoutes.js # Transaction routes (thin)
 │   ├── server.js              # Express server setup
 │   └── startServer.bat        # Windows start script
 ├── frontend/                   # 👁️ Views - React frontend
@@ -30,7 +33,7 @@ FYP_Duitku/
 │   ├── src/
 │   │   ├── components/        # React components
 │   │   ├── contexts/          # React context (state management)
-│   │   └── UserManagement.js  # Main user management component
+│   │   └── TransactionDashboard.js # Main transaction dashboard component
 │   └── package.json
 ├── package.json               # Backend dependencies
 └── README.md
@@ -51,14 +54,16 @@ FYP_Duitku/
 ### **Controllers** (Business Logic Layer)
 - **Location**: `backend/controllers/`
 - **Purpose**: Handle business logic, process requests, coordinate between models and views
-- **Example**: AuthController for login/register, UserController for CRUD operations
+- **Example**: AuthController for login/register, TransactionController for transaction CRUD operations
 
 ## 🚀 Features
 
 - **User Authentication** (Register, Login, JWT tokens)
-- **User Management** (CRUD operations)
+- **Transaction Management** (Income/Expense tracking with CRUD operations)
+- **Financial Summary** (Total Income, Expenses, and Balance calculation)
+- **Transaction Categories** (Organize transactions by categories)
 - **Protected Routes** (Authentication middleware)
-- **Responsive UI** (React frontend)
+- **Responsive UI** (React frontend with modern styling)
 - **MVC Architecture** (Clean code organization)
 
 ## 🛠️ Technologies Used
@@ -118,7 +123,14 @@ startClient.bat
 - `POST /api/auth/login` - User login
 - `GET /api/auth/verify` - Token verification
 
-### User Management (Protected)
+### Transaction Management (Protected)
+- `GET /api/transactions` - Get user's transactions with financial summary
+- `POST /api/transactions` - Create new transaction (income/expense)
+- `GET /api/transactions/:id` - Get specific transaction
+- `PUT /api/transactions/:id` - Update transaction
+- `DELETE /api/transactions/:id` - Delete transaction
+
+### User Management (Protected - Admin)
 - `GET /api/users` - Get all users
 - `POST /api/users` - Create user (admin)
 - `PUT /api/users/:id` - Update user
@@ -137,8 +149,12 @@ startClient.bat
 1. Start the backend server (http://localhost:5000)
 2. Start the frontend application (http://localhost:3000)
 3. Register a new account or login with existing credentials
-4. Access the user management dashboard
-5. Perform CRUD operations on users
+4. Access the transaction dashboard to:
+   - View your financial summary (Income, Expenses, Balance)
+   - Add new transactions (income or expense)
+   - Edit existing transactions
+   - Delete transactions
+   - Organize transactions by categories
 
 ## 🤝 Contributing
 

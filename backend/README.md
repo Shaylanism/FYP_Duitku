@@ -10,14 +10,17 @@ backend/
 │   └── database.js          # Database connection configuration
 ├── controllers/             # Controller layer - Business logic
 │   ├── AuthController.js    # Authentication business logic
-│   └── UserController.js    # User management business logic
+│   ├── UserController.js    # User management business logic
+│   └── TransactionController.js # Transaction management business logic
 ├── middleware/              # Express middleware
 │   └── auth.js             # Authentication middleware
 ├── models/                  # Model layer - Data models
-│   └── User.js             # User data model with Mongoose schema
+│   ├── User.js             # User data model with Mongoose schema
+│   └── Transaction.js      # Transaction data model with Mongoose schema
 ├── routes/                  # Route layer - API endpoints (thin routes)
 │   ├── authRoutes.js       # Authentication routes
-│   └── userRoutes.js       # User management routes
+│   ├── userRoutes.js       # User management routes
+│   └── transactionRoutes.js # Transaction management routes
 ├── server.js               # Express server configuration
 └── startServer.bat         # Windows batch file to start server
 ```
@@ -61,6 +64,13 @@ backend/
 - `POST /` - Create new user (admin)
 - `PUT /:id` - Update user
 - `DELETE /:id` - Delete user
+
+### Transaction Management Routes (`/api/transactions`)
+- `GET /` - Get user's transactions with summary
+- `POST /` - Create new transaction
+- `GET /:id` - Get specific transaction
+- `PUT /:id` - Update transaction
+- `DELETE /:id` - Delete transaction
 
 ## Benefits of This Structure
 
