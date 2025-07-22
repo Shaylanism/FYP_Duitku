@@ -4,6 +4,79 @@ import { useAuth } from './contexts/AuthContext';
 
 const API_URL = '/api/transactions';
 
+// Custom Category Select Component that shows only 3 options before scrolling
+const CategorySelect = ({ name, value, onChange, options, required, className }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleSelect = (category) => {
+    onChange({ target: { name, value: category } });
+    setIsOpen(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.category-dropdown')) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative category-dropdown">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        className={`${className} bg-white cursor-pointer flex items-center justify-between`}
+      >
+        <span className={value ? 'text-gray-900' : 'text-gray-500'}>
+          {value || 'Select category...'}
+        </span>
+        <svg 
+          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
+          <div className="max-h-32 overflow-y-auto"> {/* Shows ~4 options before scroll */}
+            {options.length === 0 ? (
+              <div className="px-3 py-2 text-gray-500">Loading categories...</div>
+            ) : (
+              options.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => handleSelect(category)}
+                  className={`w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none ${
+                    value === category ? 'bg-blue-50 text-blue-700' : 'text-gray-900'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 function TransactionDashboard() {
   const [transactions, setTransactions] = useState([]);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
@@ -249,22 +322,14 @@ function TransactionDashboard() {
           </div>
           <div>
             <label className="block mb-1 font-medium">Category</label>
-            <select
+            <CategorySelect
               name="category"
               value={form.category}
               onChange={handleChange}
+              options={availableCategories}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-            >
-              {availableCategories.length === 0 && (
-                <option value="">Loading categories...</option>
-              )}
-              {availableCategories.map(category => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </div>
         <div className="mb-4">
