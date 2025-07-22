@@ -122,7 +122,7 @@ function TransactionDashboard() {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'MYR'
     }).format(amount);
   };
 
@@ -199,7 +199,7 @@ function TransactionDashboard() {
             </select>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: 4, fontWeight: '500' }}>Amount ($)</label>
+            <label style={{ display: 'block', marginBottom: 4, fontWeight: '500' }}>Amount (RM)</label>
             <input
               type="number"
               name="amount"
@@ -217,7 +217,7 @@ function TransactionDashboard() {
             <input
               type="text"
               name="category"
-              placeholder="General"
+              placeholder="(Salary, Food, Transport, etc.)"
               value={form.category}
               onChange={handleChange}
               style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
