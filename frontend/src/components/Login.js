@@ -42,40 +42,40 @@ const Login = () => {
     };
 
     return (
-        <div style={styles.container}>
-            <div style={styles.loginBox}>
-                <h2 style={styles.title}>Welcome Back</h2>
-                <p style={styles.subtitle}>Sign in to your account</p>
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-5">
+            <div className="bg-white p-10 rounded-lg shadow-lg w-full max-w-sm">
+                <h2 className="text-3xl font-bold text-center mb-2 text-gray-800">Welcome Back</h2>
+                <p className="text-center text-gray-600 mb-8">Sign in to your account</p>
                 
-                <form onSubmit={handleSubmit} style={styles.form}>
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label}>Email</label>
+                <form onSubmit={handleSubmit} className="flex flex-col">
+                    <div className="mb-5">
+                        <label className="block mb-1.5 font-medium text-gray-800">Email</label>
                         <input
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            style={styles.input}
+                            className="w-full p-3 border border-gray-300 rounded text-base transition-colors duration-300 focus:border-blue-500 focus:outline-none box-border"
                             placeholder="Enter your email"
                             required
                         />
                     </div>
                     
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label}>Password</label>
+                    <div className="mb-5">
+                        <label className="block mb-1.5 font-medium text-gray-800">Password</label>
                         <input
                             type="password"
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            style={styles.input}
+                            className="w-full p-3 border border-gray-300 rounded text-base transition-colors duration-300 focus:border-blue-500 focus:outline-none box-border"
                             placeholder="Enter your password"
                             required
                         />
                     </div>
                     
                     {error && (
-                        <div style={styles.error}>
+                        <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-center">
                             {error}
                         </div>
                     )}
@@ -83,105 +83,20 @@ const Login = () => {
                     <button 
                         type="submit" 
                         disabled={loading}
-                        style={{
-                            ...styles.button,
-                            opacity: loading ? 0.7 : 1,
-                            cursor: loading ? 'not-allowed' : 'pointer'
-                        }}
+                        className={`w-full p-3 bg-blue-600 text-white border-none rounded text-base font-medium cursor-pointer transition-colors duration-300 mt-2 hover:bg-blue-700 ${
+                            loading ? 'opacity-70 cursor-not-allowed' : ''
+                        }`}
                     >
                         {loading ? 'Signing in...' : 'Sign In'}
                     </button>
                 </form>
                 
-                <div style={styles.footer}>
-                    <p>Don't have an account? <Link to="/register" style={styles.link}>Sign up</Link></p>
+                <div className="text-center mt-6">
+                    <p>Don't have an account? <Link to="/register" className="text-blue-600 no-underline font-medium hover:text-blue-700">Sign up</Link></p>
                 </div>
             </div>
         </div>
     );
-};
-
-const styles = {
-    container: {
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f5f5f5',
-        padding: '20px'
-    },
-    loginBox: {
-        backgroundColor: 'white',
-        padding: '40px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-        width: '100%',
-        maxWidth: '400px'
-    },
-    title: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: '8px',
-        color: '#333'
-    },
-    subtitle: {
-        textAlign: 'center',
-        color: '#666',
-        marginBottom: '32px'
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column'
-    },
-    inputGroup: {
-        marginBottom: '20px'
-    },
-    label: {
-        display: 'block',
-        marginBottom: '6px',
-        fontWeight: '500',
-        color: '#333'
-    },
-    input: {
-        width: '100%',
-        padding: '12px',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        fontSize: '16px',
-        transition: 'border-color 0.3s',
-        boxSizing: 'border-box'
-    },
-    button: {
-        width: '100%',
-        padding: '12px',
-        backgroundColor: '#007bff',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        fontSize: '16px',
-        fontWeight: '500',
-        cursor: 'pointer',
-        transition: 'background-color 0.3s',
-        marginTop: '8px'
-    },
-    error: {
-        backgroundColor: '#fee',
-        color: '#c33',
-        padding: '12px',
-        borderRadius: '4px',
-        marginBottom: '16px',
-        textAlign: 'center'
-    },
-    footer: {
-        textAlign: 'center',
-        marginTop: '24px'
-    },
-    link: {
-        color: '#007bff',
-        textDecoration: 'none',
-        fontWeight: '500'
-    }
 };
 
 export default Login; 
