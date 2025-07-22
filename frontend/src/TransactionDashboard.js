@@ -7,17 +7,35 @@ const API_URL = '/api/transactions';
 function TransactionDashboard() {
   const [transactions, setTransactions] = useState([]);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
+  const [categories, setCategories] = useState({ income: [], expense: [] });
   const [form, setForm] = useState({ 
     type: 'expense', 
     amount: '', 
     description: '', 
-    category: 'General',
+    category: '',
     id: null 
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const { user, logout } = useAuth();
+
+  // Fetch categories
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/categories`);
+      setCategories(res.data.categories);
+      // Set default category when categories are loaded
+      if (res.data.categories.expense.length > 0) {
+        setForm(prev => ({ 
+          ...prev, 
+          category: prev.category || res.data.categories.expense[0] 
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
 
   // Fetch transactions
   const fetchTransactions = async () => {
@@ -34,12 +52,25 @@ function TransactionDashboard() {
   };
 
   useEffect(() => {
+    fetchCategories();
     fetchTransactions();
   }, []);
 
   // Handle form input
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    if (name === 'type') {
+      // When type changes, update category to first available option for that type
+      const availableCategories = categories[value] || [];
+      setForm({ 
+        ...form, 
+        [name]: value,
+        category: availableCategories[0] || ''
+      });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   // Add or update transaction
@@ -48,8 +79,8 @@ function TransactionDashboard() {
     setLoading(true);
     
     // Validation
-    if (!form.amount || !form.description) {
-      setError('Amount and description are required');
+    if (!form.amount || !form.description || !form.category) {
+      setError('Amount, description, and category are required');
       setLoading(false);
       return;
     }
@@ -76,7 +107,15 @@ function TransactionDashboard() {
           category: form.category
         });
       }
-      setForm({ type: 'expense', amount: '', description: '', category: 'General', id: null });
+      
+      // Reset form with default values
+      setForm({ 
+        type: 'expense', 
+        amount: '', 
+        description: '', 
+        category: categories.expense?.[0] || '', 
+        id: null 
+      });
       setEditing(false);
       fetchTransactions();
       setError('');
@@ -135,6 +174,9 @@ function TransactionDashboard() {
       minute: '2-digit'
     });
   };
+
+  // Get current available categories based on selected type
+  const availableCategories = categories[form.type] || [];
 
   return (
     <div style={{ maxWidth: 1200, margin: '2rem auto', padding: 20, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #eee' }}>
@@ -214,14 +256,22 @@ function TransactionDashboard() {
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: 4, fontWeight: '500' }}>Category</label>
-            <input
-              type="text"
+            <select
               name="category"
-              placeholder="(Salary, Food, Transport, etc.)"
               value={form.category}
               onChange={handleChange}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
-            />
+              required
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
+            >
+              {availableCategories.length === 0 && (
+                <option value="">Loading categories...</option>
+              )}
+              {availableCategories.map(category => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         <div style={{ marginBottom: 16 }}>
@@ -256,7 +306,13 @@ function TransactionDashboard() {
             <button 
               type="button" 
               onClick={() => { 
-                setForm({ type: 'expense', amount: '', description: '', category: 'General', id: null }); 
+                setForm({ 
+                  type: 'expense', 
+                  amount: '', 
+                  description: '', 
+                  category: categories.expense?.[0] || '', 
+                  id: null 
+                }); 
                 setEditing(false); 
               }} 
               style={{ 

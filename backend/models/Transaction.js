@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
 
+// Define predefined categories for each transaction type
+const INCOME_CATEGORIES = ['Salary', 'Rental', 'Sale', 'Refund'];
+const EXPENSE_CATEGORIES = ['Car', 'Fuel', 'Food & Beverages', 'Home', 'Bills', 'Health', 'Education', 'Transportation', 'Entertainment', 'Shopping', 'Insurance', 'Tax'];
+
 const transactionSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
@@ -23,7 +27,28 @@ const transactionSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        default: 'General'
+        required: true,
+        validate: {
+            validator: function(value) {
+                // Allow existing invalid categories to remain (backward compatibility)
+                // But validate new transactions against predefined categories
+                if (this.isNew) {
+                    if (this.type === 'income') {
+                        return INCOME_CATEGORIES.includes(value);
+                    } else if (this.type === 'expense') {
+                        return EXPENSE_CATEGORIES.includes(value);
+                    }
+                    return false;
+                }
+                // For existing records, allow any category (backward compatibility)
+                return true;
+            },
+            message: function(props) {
+                const type = this.type;
+                const validCategories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+                return `Invalid category '${props.value}' for ${type} transaction. Valid categories are: ${validCategories.join(', ')}`;
+            }
+        }
     }
 }, { 
     timestamps: true // createdAt and updatedAt
@@ -31,6 +56,19 @@ const transactionSchema = new mongoose.Schema({
 
 // Index for efficient queries by user
 transactionSchema.index({ user: 1, createdAt: -1 });
+
+// Static methods to get categories
+transactionSchema.statics.getIncomeCategories = function() {
+    return INCOME_CATEGORIES;
+};
+
+transactionSchema.statics.getExpenseCategories = function() {
+    return EXPENSE_CATEGORIES;
+};
+
+transactionSchema.statics.getCategoriesByType = function(type) {
+    return type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+};
 
 const Transaction = mongoose.model("Transaction", transactionSchema);
 

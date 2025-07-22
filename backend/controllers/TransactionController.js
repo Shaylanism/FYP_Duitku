@@ -2,6 +2,27 @@ import Transaction from "../models/Transaction.js";
 import mongoose from "mongoose";
 
 class TransactionController {
+    // Get categories for transaction types
+    async getCategories(req, res) {
+        try {
+            const categories = {
+                income: Transaction.getIncomeCategories(),
+                expense: Transaction.getExpenseCategories()
+            };
+            
+            res.status(200).json({
+                success: true,
+                categories
+            });
+        } catch (error) {
+            console.error("Error fetching categories:", error.message);
+            res.status(500).json({
+                success: false,
+                message: "Failed to fetch categories"
+            });
+        }
+    }
+
     // Create transaction
     async createTransaction(req, res) {
         try {
@@ -9,10 +30,10 @@ class TransactionController {
             const userId = req.user._id; // From auth middleware
 
             // Validation
-            if (!type || !amount || !description) {
+            if (!type || !amount || !description || !category) {
                 return res.status(400).json({ 
                     success: false, 
-                    message: "Type, amount, and description are required" 
+                    message: "Type, amount, description, and category are required" 
                 });
             }
 
@@ -30,13 +51,22 @@ class TransactionController {
                 });
             }
 
+            // Validate category based on type
+            const validCategories = Transaction.getCategoriesByType(type);
+            if (!validCategories.includes(category)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid category '${category}' for ${type} transaction. Valid categories are: ${validCategories.join(', ')}`
+                });
+            }
+
             // Create new transaction
             const newTransaction = new Transaction({
                 user: userId,
                 type,
                 amount: parseFloat(amount),
                 description: description.trim(),
-                category: category || 'General'
+                category
             });
             
             await newTransaction.save();
@@ -160,6 +190,17 @@ class TransactionController {
                     success: false, 
                     message: "Transaction not found or not authorized" 
                 });
+            }
+
+            // Validate category if provided and using predefined categories only
+            const finalType = type || transaction.type;
+            if (category) {
+                const validCategories = Transaction.getCategoriesByType(finalType);
+                if (!validCategories.includes(category)) {
+                    // For updates, we'll be more permissive to maintain backward compatibility
+                    // But we'll still provide feedback about valid categories
+                    console.warn(`Category '${category}' is not in predefined list for ${finalType}. Valid categories are: ${validCategories.join(', ')}`);
+                }
             }
 
             // Update fields
