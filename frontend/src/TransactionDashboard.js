@@ -179,69 +179,62 @@ function TransactionDashboard() {
   const availableCategories = categories[form.type] || [];
 
   return (
-    <div style={{ maxWidth: 1200, margin: '2rem auto', padding: 20, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #eee' }}>
+    <div className="max-w-6xl mx-auto my-8 p-5 bg-white rounded-lg shadow-md">
       {/* Header with user info and logout */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #eee' }}>
+      <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
         <div>
-          <h2 style={{ margin: 0 }}>Transaction Dashboard</h2>
-          <p style={{ margin: '4px 0 0 0', color: '#666' }}>Welcome back, {user?.name}</p>
+          <h2 className="text-2xl font-bold m-0">Transaction Dashboard</h2>
+          <p className="text-gray-600 mt-1 mb-0">Welcome back, {user?.name}</p>
         </div>
         <button 
           onClick={handleLogout}
-          style={{ 
-            padding: '8px 16px', 
-            backgroundColor: '#dc3545', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px', 
-            cursor: 'pointer' 
-          }}
+          className="px-4 py-2 bg-red-600 text-white border-none rounded cursor-pointer hover:bg-red-700 transition-colors"
         >
           Logout
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <div style={{ padding: 16, backgroundColor: '#e8f5e9', borderRadius: 8, textAlign: 'center' }}>
-          <h3 style={{ margin: '0 0 8px 0', color: '#2e7d32' }}>Total Income</h3>
-          <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#1b5e20' }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="p-4 bg-green-50 rounded-lg text-center">
+          <h3 className="mb-2 mt-0 text-green-800">Total Income</h3>
+          <p className="m-0 text-2xl font-bold text-green-900">
             {formatCurrency(summary.totalIncome)}
           </p>
         </div>
-        <div style={{ padding: 16, backgroundColor: '#ffebee', borderRadius: 8, textAlign: 'center' }}>
-          <h3 style={{ margin: '0 0 8px 0', color: '#c62828' }}>Total Expenses</h3>
-          <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#b71c1c' }}>
+        <div className="p-4 bg-red-50 rounded-lg text-center">
+          <h3 className="mb-2 mt-0 text-red-800">Total Expenses</h3>
+          <p className="m-0 text-2xl font-bold text-red-900">
             {formatCurrency(summary.totalExpense)}
           </p>
         </div>
-        <div style={{ padding: 16, backgroundColor: summary.balance >= 0 ? '#e3f2fd' : '#fff3e0', borderRadius: 8, textAlign: 'center' }}>
-          <h3 style={{ margin: '0 0 8px 0', color: summary.balance >= 0 ? '#1565c0' : '#ef6c00' }}>Balance</h3>
-          <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: summary.balance >= 0 ? '#0d47a1' : '#e65100' }}>
+        <div className={`p-4 rounded-lg text-center ${summary.balance >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
+          <h3 className={`mb-2 mt-0 ${summary.balance >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>Balance</h3>
+          <p className={`m-0 text-2xl font-bold ${summary.balance >= 0 ? 'text-blue-900' : 'text-orange-900'}`}>
             {formatCurrency(summary.balance)}
           </p>
         </div>
       </div>
 
       {/* Transaction Form */}
-      <form onSubmit={handleSubmit} style={{ marginBottom: 24, padding: 20, backgroundColor: '#f8f9fa', borderRadius: 8 }}>
-        <h3 style={{ marginTop: 0 }}>{editing ? 'Edit Transaction' : 'Add New Transaction'}</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+      <form onSubmit={handleSubmit} className="mb-6 p-5 bg-gray-50 rounded-lg">
+        <h3 className="mt-0 mb-4">{editing ? 'Edit Transaction' : 'Add New Transaction'}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           <div>
-            <label style={{ display: 'block', marginBottom: 4, fontWeight: '500' }}>Type</label>
+            <label className="block mb-1 font-medium">Type</label>
             <select
               name="type"
               value={form.type}
               onChange={handleChange}
               required
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
             >
               <option value="income">Income</option>
               <option value="expense">Expense</option>
             </select>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: 4, fontWeight: '500' }}>Amount (RM)</label>
+            <label className="block mb-1 font-medium">Amount (RM)</label>
             <input
               type="number"
               name="amount"
@@ -251,17 +244,17 @@ function TransactionDashboard() {
               min="0.01"
               step="0.01"
               required
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 box-border"
             />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: 4, fontWeight: '500' }}>Category</label>
+            <label className="block mb-1 font-medium">Category</label>
             <select
               name="category"
               value={form.category}
               onChange={handleChange}
               required
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
             >
               {availableCategories.length === 0 && (
                 <option value="">Loading categories...</option>
@@ -274,8 +267,8 @@ function TransactionDashboard() {
             </select>
           </div>
         </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', marginBottom: 4, fontWeight: '500' }}>Description</label>
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">Description</label>
           <input
             type="text"
             name="description"
@@ -283,22 +276,18 @@ function TransactionDashboard() {
             value={form.description}
             onChange={handleChange}
             required
-            style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 box-border"
           />
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="flex gap-2">
           <button 
             type="submit" 
             disabled={loading}
-            style={{ 
-              padding: '8px 16px', 
-              backgroundColor: editing ? '#ffc107' : '#007bff', 
-              color: editing ? '#212529' : 'white', 
-              border: 'none', 
-              borderRadius: '4px', 
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1
-            }}
+            className={`px-4 py-2 border-none rounded cursor-pointer transition-colors ${
+              editing 
+                ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-600' 
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            } ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {loading ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update Transaction' : 'Add Transaction')}
           </button>
@@ -315,14 +304,7 @@ function TransactionDashboard() {
                 }); 
                 setEditing(false); 
               }} 
-              style={{ 
-                padding: '8px 16px', 
-                backgroundColor: '#6c757d', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '4px', 
-                cursor: 'pointer' 
-              }}
+              className="px-4 py-2 bg-gray-600 text-white border-none rounded cursor-pointer hover:bg-gray-700 transition-colors"
             >
               Cancel
             </button>
@@ -330,77 +312,54 @@ function TransactionDashboard() {
         </div>
       </form>
 
-      {error && <div style={{ color: 'red', marginBottom: 12, padding: '8px', backgroundColor: '#fee', borderRadius: '4px' }}>{error}</div>}
+      {error && <div className="text-red-700 mb-3 p-2 bg-red-50 rounded">{error}</div>}
       
       {/* Transactions Table */}
       {loading && !transactions.length ? (
-        <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
+        <div className="text-center py-5">Loading...</div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th style={{ borderBottom: '2px solid #dee2e6', textAlign: 'left', padding: '12px 8px' }}>Date</th>
-                <th style={{ borderBottom: '2px solid #dee2e6', textAlign: 'left', padding: '12px 8px' }}>Type</th>
-                <th style={{ borderBottom: '2px solid #dee2e6', textAlign: 'left', padding: '12px 8px' }}>Description</th>
-                <th style={{ borderBottom: '2px solid #dee2e6', textAlign: 'left', padding: '12px 8px' }}>Category</th>
-                <th style={{ borderBottom: '2px solid #dee2e6', textAlign: 'right', padding: '12px 8px' }}>Amount</th>
-                <th style={{ borderBottom: '2px solid #dee2e6', textAlign: 'center', padding: '12px 8px' }}>Actions</th>
+                <th className="border-b-2 border-gray-300 text-left py-3 px-2">Date</th>
+                <th className="border-b-2 border-gray-300 text-left py-3 px-2">Type</th>
+                <th className="border-b-2 border-gray-300 text-left py-3 px-2">Description</th>
+                <th className="border-b-2 border-gray-300 text-left py-3 px-2">Category</th>
+                <th className="border-b-2 border-gray-300 text-right py-3 px-2">Amount</th>
+                <th className="border-b-2 border-gray-300 text-center py-3 px-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {transactions.map((transaction) => (
-                <tr key={transaction._id} style={{ borderBottom: '1px solid #f8f9fa' }}>
-                  <td style={{ padding: '12px 8px', fontSize: '14px' }}>{formatDate(transaction.createdAt)}</td>
-                  <td style={{ padding: '12px 8px' }}>
-                    <span style={{ 
-                      padding: '4px 8px', 
-                      borderRadius: '4px', 
-                      fontSize: '12px', 
-                      fontWeight: '500',
-                      backgroundColor: transaction.type === 'income' ? '#d4edda' : '#f8d7da',
-                      color: transaction.type === 'income' ? '#155724' : '#721c24'
-                    }}>
+                <tr key={transaction._id} className="border-b border-gray-100">
+                  <td className="py-3 px-2 text-sm">{formatDate(transaction.createdAt)}</td>
+                  <td className="py-3 px-2">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      transaction.type === 'income' 
+                        ? 'bg-green-200 text-green-800' 
+                        : 'bg-red-200 text-red-800'
+                    }`}>
                       {transaction.type === 'income' ? 'Income' : 'Expense'}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 8px' }}>{transaction.description}</td>
-                  <td style={{ padding: '12px 8px', color: '#666' }}>{transaction.category}</td>
-                  <td style={{ 
-                    padding: '12px 8px', 
-                    textAlign: 'right', 
-                    fontWeight: '500',
-                    color: transaction.type === 'income' ? '#28a745' : '#dc3545'
-                  }}>
+                  <td className="py-3 px-2">{transaction.description}</td>
+                  <td className="py-3 px-2 text-gray-600">{transaction.category}</td>
+                  <td className={`py-3 px-2 text-right font-medium ${
+                    transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                  }`}>
                     {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
                   </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                  <td className="py-3 px-2 text-center">
                     <button 
                       onClick={() => handleEdit(transaction)} 
-                      style={{ 
-                        marginRight: 8, 
-                        padding: '4px 12px', 
-                        backgroundColor: '#ffc107', 
-                        color: '#212529', 
-                        border: 'none', 
-                        borderRadius: '4px', 
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
+                      className="mr-2 px-3 py-1 bg-yellow-500 text-gray-900 border-none rounded cursor-pointer text-xs hover:bg-yellow-600 transition-colors"
                     >
                       Edit
                     </button>
                     <button 
                       onClick={() => handleDelete(transaction._id)} 
-                      style={{ 
-                        padding: '4px 12px', 
-                        backgroundColor: '#dc3545', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '4px', 
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
+                      className="px-3 py-1 bg-red-600 text-white border-none rounded cursor-pointer text-xs hover:bg-red-700 transition-colors"
                     >
                       Delete
                     </button>
@@ -409,7 +368,7 @@ function TransactionDashboard() {
               ))}
               {transactions.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', color: '#888', padding: '20px' }}>
+                  <td colSpan="6" className="text-center text-gray-500 py-5">
                     No transactions found. Add your first transaction above!
                   </td>
                 </tr>

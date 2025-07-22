@@ -68,66 +68,66 @@ const Register = () => {
     };
 
     return (
-        <div style={styles.container}>
-            <div style={styles.registerBox}>
-                <h2 style={styles.title}>Create Account</h2>
-                <p style={styles.subtitle}>Sign up for a new account</p>
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-5">
+            <div className="bg-white p-10 rounded-lg shadow-lg w-full max-w-sm">
+                <h2 className="text-3xl font-bold text-center mb-2 text-gray-800">Create Account</h2>
+                <p className="text-center text-gray-600 mb-8">Sign up for a new account</p>
                 
-                <form onSubmit={handleSubmit} style={styles.form}>
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label}>Full Name</label>
+                <form onSubmit={handleSubmit} className="flex flex-col">
+                    <div className="mb-5">
+                        <label className="block mb-1.5 font-medium text-gray-800">Full Name</label>
                         <input
                             type="text"
                             name="name"
                             value={formData.name}
                             onChange={handleChange}
-                            style={styles.input}
+                            className="w-full p-3 border border-gray-300 rounded text-base transition-colors duration-300 focus:border-blue-500 focus:outline-none box-border"
                             placeholder="Enter your full name"
                             required
                         />
                     </div>
                     
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label}>Email</label>
+                    <div className="mb-5">
+                        <label className="block mb-1.5 font-medium text-gray-800">Email</label>
                         <input
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            style={styles.input}
+                            className="w-full p-3 border border-gray-300 rounded text-base transition-colors duration-300 focus:border-blue-500 focus:outline-none box-border"
                             placeholder="Enter your email"
                             required
                         />
                     </div>
                     
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label}>Password</label>
+                    <div className="mb-5">
+                        <label className="block mb-1.5 font-medium text-gray-800">Password</label>
                         <input
                             type="password"
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            style={styles.input}
+                            className="w-full p-3 border border-gray-300 rounded text-base transition-colors duration-300 focus:border-blue-500 focus:outline-none box-border"
                             placeholder="Enter your password (min 6 characters)"
                             required
                         />
                     </div>
                     
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label}>Confirm Password</label>
+                    <div className="mb-5">
+                        <label className="block mb-1.5 font-medium text-gray-800">Confirm Password</label>
                         <input
                             type="password"
                             name="confirmPassword"
                             value={formData.confirmPassword}
                             onChange={handleChange}
-                            style={styles.input}
+                            className="w-full p-3 border border-gray-300 rounded text-base transition-colors duration-300 focus:border-blue-500 focus:outline-none box-border"
                             placeholder="Confirm your password"
                             required
                         />
                     </div>
                     
                     {error && (
-                        <div style={styles.error}>
+                        <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-center">
                             {error}
                         </div>
                     )}
@@ -135,105 +135,20 @@ const Register = () => {
                     <button 
                         type="submit" 
                         disabled={loading}
-                        style={{
-                            ...styles.button,
-                            opacity: loading ? 0.7 : 1,
-                            cursor: loading ? 'not-allowed' : 'pointer'
-                        }}
+                        className={`w-full p-3 bg-green-600 text-white border-none rounded text-base font-medium cursor-pointer transition-colors duration-300 mt-2 hover:bg-green-700 ${
+                            loading ? 'opacity-70 cursor-not-allowed' : ''
+                        }`}
                     >
                         {loading ? 'Creating Account...' : 'Create Account'}
                     </button>
                 </form>
                 
-                <div style={styles.footer}>
-                    <p>Already have an account? <Link to="/login" style={styles.link}>Sign in</Link></p>
+                <div className="text-center mt-6">
+                    <p>Already have an account? <Link to="/login" className="text-blue-600 no-underline font-medium hover:text-blue-700">Sign in</Link></p>
                 </div>
             </div>
         </div>
     );
-};
-
-const styles = {
-    container: {
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f5f5f5',
-        padding: '20px'
-    },
-    registerBox: {
-        backgroundColor: 'white',
-        padding: '40px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-        width: '100%',
-        maxWidth: '400px'
-    },
-    title: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: '8px',
-        color: '#333'
-    },
-    subtitle: {
-        textAlign: 'center',
-        color: '#666',
-        marginBottom: '32px'
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column'
-    },
-    inputGroup: {
-        marginBottom: '20px'
-    },
-    label: {
-        display: 'block',
-        marginBottom: '6px',
-        fontWeight: '500',
-        color: '#333'
-    },
-    input: {
-        width: '100%',
-        padding: '12px',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        fontSize: '16px',
-        transition: 'border-color 0.3s',
-        boxSizing: 'border-box'
-    },
-    button: {
-        width: '100%',
-        padding: '12px',
-        backgroundColor: '#28a745',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        fontSize: '16px',
-        fontWeight: '500',
-        cursor: 'pointer',
-        transition: 'background-color 0.3s',
-        marginTop: '8px'
-    },
-    error: {
-        backgroundColor: '#fee',
-        color: '#c33',
-        padding: '12px',
-        borderRadius: '4px',
-        marginBottom: '16px',
-        textAlign: 'center'
-    },
-    footer: {
-        textAlign: 'center',
-        marginTop: '24px'
-    },
-    link: {
-        color: '#007bff',
-        textDecoration: 'none',
-        fontWeight: '500'
-    }
 };
 
 export default Register; 
