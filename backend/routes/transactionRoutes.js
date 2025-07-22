@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // Transaction routes - delegating to controller
+router.get("/categories", (req, res) => TransactionController.getCategories(req, res));
 router.post("/", (req, res) => TransactionController.createTransaction(req, res));
 router.get("/", (req, res) => TransactionController.getTransactions(req, res));
 router.get("/:id", (req, res) => TransactionController.getTransactionById(req, res));
