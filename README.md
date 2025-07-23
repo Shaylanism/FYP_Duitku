@@ -66,6 +66,10 @@ FYP_Duitku/
 - **Budget vs Actual Comparison** (Visual indicators for budget performance)
 - **Month-wise Budget Management** (Past months view-only, current month editable)
 - **Budget Copy Functionality** (Copy budgets from previous months)
+- **Planned Payments** (Recurring bill and payment management)
+- **Payment Reminders** (3-day and 1-day reminder system)
+- **Payment Settlement** (Mark payments as settled with automatic transaction creation)
+- **Smart Notifications** (Login popup for unsettled payments with navigation warnings)
 - **Protected Routes** (Authentication middleware)
 - **Responsive UI** (React frontend with modern styling)
 - **MVC Architecture** (Clean code organization)
@@ -168,6 +172,16 @@ startClient.bat
    - View budget status indicators (On Track, Warning, Over Budget)
    - Copy budgets from previous months
    - Filter budgets by month (past months are view-only)
+
+### 🔔 **Planned Payments**
+   - Set up recurring monthly payments (bills, loans, subscriptions)
+   - Configure due dates and payment amounts
+   - Automatic status tracking (Pending, Settled, Overdue)
+   - Mark payments as settled to create transactions automatically
+   - Enable/disable payment plans
+   - Reminder system (3 days and 1 day before due date)
+   - **Login notification popup** for unsettled payments
+   - **Warning indicators** in navigation for payments due within 3 days
 
 ## 🤝 Contributing
 

@@ -12,18 +12,21 @@ backend/
 │   ├── AuthController.js    # Authentication business logic
 │   ├── UserController.js    # User management business logic
 │   ├── TransactionController.js # Transaction management business logic
-│   └── BudgetController.js  # Budget planning business logic
+│   ├── BudgetController.js  # Budget planning business logic
+│   └── PlannedPaymentController.js # Planned payment management business logic
 ├── middleware/              # Express middleware
 │   └── auth.js             # Authentication middleware
 ├── models/                  # Model layer - Data models
 │   ├── User.js             # User data model with Mongoose schema
 │   ├── Transaction.js      # Transaction data model with Mongoose schema
-│   └── Budget.js           # Budget data model with Mongoose schema
+│   ├── Budget.js           # Budget data model with Mongoose schema
+│   └── PlannedPayment.js   # Planned payment data model with Mongoose schema
 ├── routes/                  # Route layer - API endpoints (thin routes)
 │   ├── authRoutes.js       # Authentication routes
 │   ├── userRoutes.js       # User management routes
 │   ├── transactionRoutes.js # Transaction management routes
-│   └── budgetRoutes.js     # Budget planning routes
+│   ├── budgetRoutes.js     # Budget planning routes
+│   └── plannedPaymentRoutes.js # Planned payment management routes
 ├── server.js               # Express server configuration
 └── startServer.bat         # Windows batch file to start server
 ```
@@ -82,6 +85,16 @@ backend/
 - `GET /:id` - Get specific budget
 - `PUT /:id` - Update budget (current month or future only)
 - `DELETE /:id` - Delete budget
+
+### Planned Payment Management Routes (`/api/planned-payments`)
+- `GET /` - Get user's planned payments with status
+- `POST /` - Create new planned payment
+- `GET /notifications` - Get payment notifications for user login popup
+- `GET /reminders` - Get payments due for reminders (for background jobs)
+- `GET /:id` - Get specific planned payment
+- `PUT /:id` - Update planned payment
+- `PUT /:id/settle` - Mark payment as settled (creates transaction)
+- `DELETE /:id` - Delete planned payment
 
 ## Benefits of This Structure
 
