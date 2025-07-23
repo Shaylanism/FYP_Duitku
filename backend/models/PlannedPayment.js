@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getValidDueDayForMonth } from "../utils/dateUtils.js";
 
 const plannedPaymentSchema = new mongoose.Schema({
     user: {
@@ -29,7 +30,7 @@ const plannedPaymentSchema = new mongoose.Schema({
         type: Number,
         required: true,
         min: 1,
-        max: 31 // Day of the month (1-31)
+        max: 31 // Day of the month (1-31). Note: Controller validates against actual month days for new entries
     },
     isActive: {
         type: Boolean,
@@ -89,11 +90,22 @@ plannedPaymentSchema.methods.isDueThisMonth = function() {
 // Method to get next due date
 plannedPaymentSchema.methods.getNextDueDate = function() {
     const now = new Date();
-    let dueDate = new Date(now.getFullYear(), now.getMonth(), this.dueDay);
+    let targetYear = now.getFullYear();
+    let targetMonth = now.getMonth();
+    
+    // Get valid due day for current month
+    let validDueDay = getValidDueDayForMonth(targetYear, targetMonth, this.dueDay);
+    let dueDate = new Date(targetYear, targetMonth, validDueDay);
     
     // If due date has passed this month, move to next month
     if (dueDate <= now) {
-        dueDate = new Date(now.getFullYear(), now.getMonth() + 1, this.dueDay);
+        targetMonth += 1;
+        if (targetMonth > 11) {
+            targetMonth = 0;
+            targetYear += 1;
+        }
+        validDueDay = getValidDueDayForMonth(targetYear, targetMonth, this.dueDay);
+        dueDate = new Date(targetYear, targetMonth, validDueDay);
     }
     
     return dueDate;

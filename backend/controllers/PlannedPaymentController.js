@@ -1,6 +1,7 @@
 import PlannedPayment from "../models/PlannedPayment.js";
 import Transaction from "../models/Transaction.js";
 import mongoose from "mongoose";
+import { getDaysInCurrentMonth, isValidDueDayForCurrentMonth } from "../utils/dateUtils.js";
 
 class PlannedPaymentController {
     // Create planned payment
@@ -24,10 +25,12 @@ class PlannedPaymentController {
                 });
             }
 
-            if (dueDay < 1 || dueDay > 31) {
+            // Validate due day against actual days in current month
+            if (!isValidDueDayForCurrentMonth(dueDay)) {
+                const maxDays = getDaysInCurrentMonth();
                 return res.status(400).json({
                     success: false,
-                    message: "Due day must be between 1 and 31"
+                    message: `Due day must be between 1 and ${maxDays} for the current month`
                 });
             }
 
@@ -165,11 +168,15 @@ class PlannedPaymentController {
                 });
             }
 
-            if (dueDay && (dueDay < 1 || dueDay > 31)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Due day must be between 1 and 31"
-                });
+            if (dueDay) {
+                // Validate due day against actual days in current month
+                if (!isValidDueDayForCurrentMonth(dueDay)) {
+                    const maxDays = getDaysInCurrentMonth();
+                    return res.status(400).json({
+                        success: false,
+                        message: `Due day must be between 1 and ${maxDays} for the current month`
+                    });
+                }
             }
 
             // Find planned payment and ensure it belongs to the user
