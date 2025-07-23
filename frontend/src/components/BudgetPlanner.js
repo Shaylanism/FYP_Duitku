@@ -17,6 +17,32 @@ function BudgetPlanner() {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM format
+  const [copyLoading, setCopyLoading] = useState(false);
+  const [availableMonths, setAvailableMonths] = useState([]); // Months with existing budgets
+
+  // Helper functions
+  const getCurrentMonth = () => new Date().toISOString().slice(0, 7);
+  const isPastMonth = (month) => month < getCurrentMonth();
+  const isFutureMonth = (month) => month > getCurrentMonth();
+
+  // Fetch available months with existing budgets
+  const fetchAvailableMonths = async () => {
+    try {
+      const res = await axios.get(`${API_URL}`);
+      const allBudgets = res.data.budgets || [];
+      
+      // Get unique months from past budgets only
+      const months = [...new Set(allBudgets
+        .map(budget => budget.month)
+        .filter(month => isPastMonth(month))
+        .sort()
+      )];
+      
+      setAvailableMonths(months);
+    } catch (err) {
+      console.error('Failed to fetch available months:', err);
+    }
+  };
 
   // Fetch categories from transactions API
   const fetchCategories = async () => {
@@ -79,6 +105,7 @@ function BudgetPlanner() {
 
   useEffect(() => {
     fetchCategories();
+    fetchAvailableMonths();
   }, []);
 
   useEffect(() => {
@@ -188,6 +215,29 @@ function BudgetPlanner() {
     setLoading(false);
   };
 
+  // Copy budgets from selected month to current month
+  const handleCopyBudgets = async (sourceMonth) => {
+    if (!window.confirm(`Are you sure you want to copy budgets from ${new Date(sourceMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} to current month?`)) {
+      return;
+    }
+
+    setCopyLoading(true);
+    try {
+      await axios.post(`${API_URL}/copy`, { sourceMonth });
+      
+      // Refresh budgets and available months
+      fetchBudgets();
+      fetchAvailableMonths();
+      setError('');
+      
+      // Switch to current month to show copied budgets
+      setSelectedMonth(getCurrentMonth());
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to copy budgets');
+    }
+    setCopyLoading(false);
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -259,9 +309,54 @@ function BudgetPlanner() {
           </div>
         </div>
 
-        {/* Budget Form */}
-        <form onSubmit={handleSubmit} className="mb-6 p-5 bg-gray-50 rounded-lg">
-          <h3 className="mt-0 mb-4">{editing ? 'Edit Budget' : 'Add New Budget'}</h3>
+        {/* Budget Form or Past Month Info */}
+        {isPastMonth(selectedMonth) ? (
+          <div className="mb-6 p-5 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="mt-0 mb-2 text-blue-800">Viewing Past Month Budget</h3>
+                <p className="text-blue-600 mb-4">
+                  You're viewing budgets for {new Date(selectedMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. 
+                  Past month budgets cannot be modified but can be used for comparison or copied to the current month.
+                </p>
+                
+                {budgets.length > 0 && (
+                  <button
+                    onClick={() => handleCopyBudgets(selectedMonth)}
+                    disabled={copyLoading}
+                    className={`px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700 transition-colors ${
+                      copyLoading ? 'opacity-70 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {copyLoading ? 'Copying...' : 'Copy to Current Month'}
+                  </button>
+                )}
+              </div>
+              
+              {availableMonths.length > 1 && (
+                <div className="ml-4">
+                  <label className="block text-sm font-medium text-blue-700 mb-2">Copy from other month:</label>
+                  <select
+                    onChange={(e) => e.target.value && handleCopyBudgets(e.target.value)}
+                    className="px-3 py-2 border border-blue-300 rounded focus:outline-none focus:border-blue-500"
+                    value=""
+                  >
+                    <option value="">Select month to copy...</option>
+                    {availableMonths
+                      .filter(month => month !== selectedMonth)
+                      .map(month => (
+                        <option key={month} value={month}>
+                          {new Date(month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="mb-6 p-5 bg-gray-50 rounded-lg">
+            <h3 className="mt-0 mb-4">{editing ? 'Edit Budget' : 'Add New Budget'}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
             <div>
               <label className="block mb-1 font-medium">Category</label>
@@ -324,7 +419,32 @@ function BudgetPlanner() {
               </button>
             )}
           </div>
-        </form>
+          </form>
+        )}
+
+        {/* Copy from past month option when current month has no budgets */}
+        {!isPastMonth(selectedMonth) && budgets.length === 0 && availableMonths.length > 0 && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h4 className="mt-0 mb-2 text-green-800">Quick Start</h4>
+            <p className="text-green-600 mb-3">No budgets found for this month. You can copy budgets from a previous month to get started quickly.</p>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-green-700">Copy from:</label>
+              <select
+                onChange={(e) => e.target.value && handleCopyBudgets(e.target.value)}
+                className="px-3 py-2 border border-green-300 rounded focus:outline-none focus:border-green-500"
+                value=""
+                disabled={copyLoading}
+              >
+                <option value="">Select a month...</option>
+                {availableMonths.map(month => (
+                  <option key={month} value={month}>
+                    {new Date(month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         {error && <div className="text-red-700 mb-3 p-2 bg-red-50 rounded">{error}</div>}
         
@@ -371,18 +491,24 @@ function BudgetPlanner() {
                         </span>
                       </td>
                       <td className="py-3 px-2 text-center">
-                        <button 
-                          onClick={() => handleEdit(budget)} 
-                          className="mr-2 px-3 py-1 bg-yellow-500 text-gray-900 border-none rounded cursor-pointer text-xs hover:bg-yellow-600 transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(budget._id)} 
-                          className="px-3 py-1 bg-red-600 text-white border-none rounded cursor-pointer text-xs hover:bg-red-700 transition-colors"
-                        >
-                          Delete
-                        </button>
+                        {isPastMonth(selectedMonth) ? (
+                          <span className="text-gray-500 text-xs">View Only</span>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => handleEdit(budget)} 
+                              className="mr-2 px-3 py-1 bg-yellow-500 text-gray-900 border-none rounded cursor-pointer text-xs hover:bg-yellow-600 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(budget._id)} 
+                              className="px-3 py-1 bg-red-600 text-white border-none rounded cursor-pointer text-xs hover:bg-red-700 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   );

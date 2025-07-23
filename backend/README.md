@@ -69,7 +69,7 @@ backend/
 - `DELETE /:id` - Delete user
 
 ### Transaction Management Routes (`/api/transactions`)
-- `GET /` - Get user's transactions with summary
+- `GET /` - Get user's transactions with summary (supports month filtering with ?month=YYYY-MM)
 - `POST /` - Create new transaction
 - `GET /:id` - Get specific transaction
 - `PUT /:id` - Update transaction
@@ -77,9 +77,10 @@ backend/
 
 ### Budget Management Routes (`/api/budgets`)
 - `GET /` - Get user's budgets (filterable by month)
-- `POST /` - Create new budget
+- `POST /` - Create new budget (current month or future only)
+- `POST /copy` - Copy budgets from past month to current month
 - `GET /:id` - Get specific budget
-- `PUT /:id` - Update budget
+- `PUT /:id` - Update budget (current month or future only)
 - `DELETE /:id` - Delete budget
 
 ## Benefits of This Structure
