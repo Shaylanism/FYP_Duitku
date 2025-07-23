@@ -91,7 +91,7 @@ function TransactionDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   // Fetch categories
   const fetchCategories = async () => {
@@ -227,10 +227,6 @@ function TransactionDashboard() {
     setLoading(false);
   };
 
-  const handleLogout = () => {
-    logout();
-  };
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -252,22 +248,14 @@ function TransactionDashboard() {
   const availableCategories = categories[form.type] || [];
 
   return (
-    <div className="max-w-6xl mx-auto my-8 p-5 bg-white rounded-lg shadow-md">
-      {/* Header with user info and logout */}
-      <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-        <div>
-          <h2 className="text-2xl font-bold m-0">Transaction Dashboard</h2>
-          <p className="text-gray-600 mt-1 mb-0">Welcome back, {user?.name}</p>
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Transaction Dashboard</h2>
+          <p className="text-gray-600">Manage your income and expenses</p>
         </div>
-        <button 
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-600 text-white border-none rounded cursor-pointer hover:bg-red-700 transition-colors"
-        >
-          Logout
-        </button>
-      </div>
 
-      {/* Summary Cards */}
+        {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="p-4 bg-green-50 rounded-lg text-center">
           <h3 className="mb-2 mt-0 text-green-800">Total Income</h3>
@@ -442,6 +430,7 @@ function TransactionDashboard() {
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 }
