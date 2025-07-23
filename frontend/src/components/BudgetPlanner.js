@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { 
+  getCurrentMonth, 
+  isPastMonth, 
+  isFutureMonth, 
+  formatMonthDisplay,
+  getAvailableMonthsFromItems 
+} from '../utils/monthUtils';
+import MonthFilter from './MonthFilter';
 
 const API_URL = '/api/budgets';
 const TRANSACTIONS_API = '/api/transactions';
@@ -16,14 +24,9 @@ function BudgetPlanner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM format
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth()); // YYYY-MM format
   const [copyLoading, setCopyLoading] = useState(false);
   const [availableMonths, setAvailableMonths] = useState([]); // Months with existing budgets
-
-  // Helper functions
-  const getCurrentMonth = () => new Date().toISOString().slice(0, 7);
-  const isPastMonth = (month) => month < getCurrentMonth();
-  const isFutureMonth = (month) => month > getCurrentMonth();
 
   // Fetch available months with existing budgets
   const fetchAvailableMonths = async () => {
@@ -32,11 +35,7 @@ function BudgetPlanner() {
       const allBudgets = res.data.budgets || [];
       
       // Get unique months from past budgets only
-      const months = [...new Set(allBudgets
-        .map(budget => budget.month)
-        .filter(month => isPastMonth(month))
-        .sort()
-      )];
+      const months = getAvailableMonthsFromItems(allBudgets, true);
       
       setAvailableMonths(months);
     } catch (err) {
@@ -217,7 +216,7 @@ function BudgetPlanner() {
 
   // Copy budgets from selected month to current month
   const handleCopyBudgets = async (sourceMonth) => {
-    if (!window.confirm(`Are you sure you want to copy budgets from ${new Date(sourceMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} to current month?`)) {
+    if (!window.confirm(`Are you sure you want to copy budgets from ${formatMonthDisplay(sourceMonth)} to current month?`)) {
       return;
     }
 
@@ -265,15 +264,13 @@ function BudgetPlanner() {
             <h2 className="text-2xl font-bold text-gray-800">Budget Planner</h2>
             <p className="text-gray-600">Plan and track your monthly spending</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Month</label>
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-            />
-          </div>
+          <MonthFilter
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            variant="native"
+            label="Select Month"
+            showReturnButton={true}
+          />
         </div>
 
         {/* Budget Form or Past Month Info */}
@@ -283,7 +280,7 @@ function BudgetPlanner() {
               <div className="flex-1">
                 <h3 className="mt-0 mb-2 text-blue-800">Viewing Past Month Budget</h3>
                 <p className="text-blue-600 mb-4">
-                  You're viewing budgets for {new Date(selectedMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. 
+                  You're viewing budgets for {formatMonthDisplay(selectedMonth)}. 
                   Past month budgets cannot be modified but can be used for comparison or copied to the current month if budgets are not set for the current month.
                 </p>
                 
@@ -313,7 +310,7 @@ function BudgetPlanner() {
                       .filter(month => month !== selectedMonth)
                       .map(month => (
                         <option key={month} value={month}>
-                          {new Date(month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          {formatMonthDisplay(month)}
                         </option>
                       ))}
                   </select>
@@ -405,7 +402,7 @@ function BudgetPlanner() {
                 <option value="">Select a month...</option>
                 {availableMonths.map(month => (
                   <option key={month} value={month}>
-                    {new Date(month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {formatMonthDisplay(month)}
                   </option>
                 ))}
               </select>
@@ -483,7 +480,7 @@ function BudgetPlanner() {
                 {budgets.length === 0 && (
                   <tr>
                     <td colSpan="6" className="text-center text-gray-500 py-5">
-                      No budgets found for {new Date(selectedMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. Add your first budget above!
+                      No budgets found for {formatMonthDisplay(selectedMonth)}. Add your first budget above!
                     </td>
                   </tr>
                 )}

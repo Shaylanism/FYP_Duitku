@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from './contexts/AuthContext';
+import { getCurrentMonth, isCurrentMonth } from './utils/monthUtils';
+import MonthFilter from './components/MonthFilter';
 
 const API_URL = '/api/transactions';
 
@@ -91,6 +93,7 @@ function TransactionDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const { user } = useAuth();
 
   // Fetch categories
@@ -110,11 +113,12 @@ function TransactionDashboard() {
     }
   };
 
-  // Fetch transactions
-  const fetchTransactions = async () => {
+  // Fetch transactions with month filter
+  const fetchTransactions = async (month = selectedMonth) => {
     setLoading(true);
     try {
-      const res = await axios.get(API_URL);
+      const params = month ? { month } : {};
+      const res = await axios.get(API_URL, { params });
       setTransactions(res.data.transactions);
       setSummary(res.data.summary);
       setError('');
@@ -128,6 +132,24 @@ function TransactionDashboard() {
     fetchCategories();
     fetchTransactions();
   }, []);
+
+  // Handle month change
+  const handleMonthChange = (newMonth) => {
+    setSelectedMonth(newMonth);
+    fetchTransactions(newMonth);
+    
+    // Cancel editing when switching months to prevent confusion
+    if (editing) {
+      setForm({ 
+        type: 'expense', 
+        amount: '', 
+        description: '', 
+        category: categories.expense?.[0] || '', 
+        id: null 
+      });
+      setEditing(false);
+    }
+  };
 
   // Handle form input
   const handleChange = (e) => {
@@ -250,9 +272,18 @@ function TransactionDashboard() {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Transaction Dashboard</h2>
-          <p className="text-gray-600">Manage your income and expenses</p>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Transaction Dashboard</h2>
+            <p className="text-gray-600">Manage your income and expenses</p>
+          </div>
+          <MonthFilter
+            selectedMonth={selectedMonth}
+            onMonthChange={handleMonthChange}
+            variant="native"
+            label="Filter by Month"
+            showReturnButton={true}
+          />
         </div>
 
         {/* Summary Cards */}
@@ -277,93 +308,102 @@ function TransactionDashboard() {
         </div>
       </div>
 
-      {/* Transaction Form */}
-      <form onSubmit={handleSubmit} className="mb-6 p-5 bg-gray-50 rounded-lg">
-        <h3 className="mt-0 mb-4">{editing ? 'Edit Transaction' : 'Add New Transaction'}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          <div>
-            <label className="block mb-1 font-medium">Type</label>
-            <select
-              name="type"
-              value={form.type}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-            >
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-            </select>
+      {/* Transaction Form - Only show for current month */}
+      {!isCurrentMonth(selectedMonth) && (
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-blue-800 text-sm mb-0">
+            📅 You are viewing transactions from a previous month. To add new transactions, please return to the current month.
+          </p>
+        </div>
+      )}
+      {isCurrentMonth(selectedMonth) && (
+        <form onSubmit={handleSubmit} className="mb-6 p-5 bg-gray-50 rounded-lg">
+          <h3 className="mt-0 mb-4">{editing ? 'Edit Transaction' : 'Add New Transaction'}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div>
+              <label className="block mb-1 font-medium">Type</label>
+              <select
+                name="type"
+                value={form.type}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+              >
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">Amount (RM)</label>
+              <input
+                type="number"
+                name="amount"
+                placeholder="0.00"
+                value={form.amount}
+                onChange={handleChange}
+                min="0.01"
+                step="0.01"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 box-border"
+              />
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">Category</label>
+              <CategorySelect
+                name="category"
+                value={form.category}
+                onChange={handleChange}
+                options={availableCategories}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block mb-1 font-medium">Amount (RM)</label>
+          <div className="mb-4">
+            <label className="block mb-1 font-medium">Description</label>
             <input
-              type="number"
-              name="amount"
-              placeholder="0.00"
-              value={form.amount}
+              type="text"
+              name="description"
+              placeholder="Enter transaction description"
+              value={form.description}
               onChange={handleChange}
-              min="0.01"
-              step="0.01"
               required
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 box-border"
             />
           </div>
-          <div>
-            <label className="block mb-1 font-medium">Category</label>
-            <CategorySelect
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              options={availableCategories}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-            />
-          </div>
-        </div>
-        <div className="mb-4">
-          <label className="block mb-1 font-medium">Description</label>
-          <input
-            type="text"
-            name="description"
-            placeholder="Enter transaction description"
-            value={form.description}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 box-border"
-          />
-        </div>
-        <div className="flex gap-2">
-          <button 
-            type="submit" 
-            disabled={loading}
-            className={`px-4 py-2 border-none rounded cursor-pointer transition-colors ${
-              editing 
-                ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-600' 
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            } ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-          >
-            {loading ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update Transaction' : 'Add Transaction')}
-          </button>
-          {editing && (
+          <div className="flex gap-2">
             <button 
-              type="button" 
-              onClick={() => { 
-                setForm({ 
-                  type: 'expense', 
-                  amount: '', 
-                  description: '', 
-                  category: categories.expense?.[0] || '', 
-                  id: null 
-                }); 
-                setEditing(false); 
-              }} 
-              className="px-4 py-2 bg-gray-600 text-white border-none rounded cursor-pointer hover:bg-gray-700 transition-colors"
+              type="submit" 
+              disabled={loading}
+              className={`px-4 py-2 border-none rounded cursor-pointer transition-colors ${
+                editing 
+                  ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-600' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              } ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              Cancel
+              {loading ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update Transaction' : 'Add Transaction')}
             </button>
-          )}
-        </div>
-      </form>
+            {editing && (
+              <button 
+                type="button" 
+                onClick={() => { 
+                  setForm({ 
+                    type: 'expense', 
+                    amount: '', 
+                    description: '', 
+                    category: categories.expense?.[0] || '', 
+                    id: null 
+                  }); 
+                  setEditing(false); 
+                }} 
+                className="px-4 py-2 bg-gray-600 text-white border-none rounded cursor-pointer hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      )}
 
       {error && <div className="text-red-700 mb-3 p-2 bg-red-50 rounded">{error}</div>}
       
@@ -406,13 +446,25 @@ function TransactionDashboard() {
                   <td className="py-3 px-2 text-center">
                     <button 
                       onClick={() => handleEdit(transaction)} 
-                      className="mr-2 px-3 py-1 bg-yellow-500 text-gray-900 border-none rounded cursor-pointer text-xs hover:bg-yellow-600 transition-colors"
+                      disabled={!isCurrentMonth(selectedMonth)}
+                      className={`mr-2 px-3 py-1 border-none rounded text-xs transition-colors ${
+                        isCurrentMonth(selectedMonth) 
+                          ? 'bg-yellow-500 text-gray-900 cursor-pointer hover:bg-yellow-600' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      title={!isCurrentMonth(selectedMonth) ? 'Cannot edit transactions from previous months' : ''}
                     >
                       Edit
                     </button>
                     <button 
                       onClick={() => handleDelete(transaction._id)} 
-                      className="px-3 py-1 bg-red-600 text-white border-none rounded cursor-pointer text-xs hover:bg-red-700 transition-colors"
+                      disabled={!isCurrentMonth(selectedMonth)}
+                      className={`px-3 py-1 border-none rounded text-xs transition-colors ${
+                        isCurrentMonth(selectedMonth) 
+                          ? 'bg-red-600 text-white cursor-pointer hover:bg-red-700' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      title={!isCurrentMonth(selectedMonth) ? 'Cannot delete transactions from previous months' : ''}
                     >
                       Delete
                     </button>
