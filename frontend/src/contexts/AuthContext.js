@@ -86,6 +86,9 @@ export const AuthProvider = ({ children }) => {
         setToken(null);
         setUser(null);
         delete axios.defaults.headers.common['Authorization'];
+        
+        // Reset notification check for next login
+        window.dispatchEvent(new CustomEvent('userLoggedOut'));
     };
 
     const value = {

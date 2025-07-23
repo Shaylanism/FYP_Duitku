@@ -284,7 +284,7 @@ function BudgetPlanner() {
                 <h3 className="mt-0 mb-2 text-blue-800">Viewing Past Month Budget</h3>
                 <p className="text-blue-600 mb-4">
                   You're viewing budgets for {new Date(selectedMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. 
-                  Past month budgets cannot be modified but can be used for comparison or copied to the current month.
+                  Past month budgets cannot be modified but can be used for comparison or copied to the current month if budgets are not set for the current month.
                 </p>
                 
                 {budgets.length > 0 && (
