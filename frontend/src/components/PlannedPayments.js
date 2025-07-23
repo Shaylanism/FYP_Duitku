@@ -80,8 +80,9 @@ function PlannedPayments() {
     }
 
     const dueDay = parseInt(form.dueDay);
-    if (dueDay < 1 || dueDay > 31) {
-      setError('Due day must be between 1 and 31');
+    const maxDaysInMonth = getDaysInCurrentMonth();
+    if (dueDay < 1 || dueDay > maxDaysInMonth) {
+      setError(`Due day must be between 1 and ${maxDaysInMonth} for the current month`);
       setLoading(false);
       return;
     }
@@ -232,8 +233,14 @@ function PlannedPayments() {
     return daysUntil;
   };
 
-  // Generate options for due day
-  const dueDayOptions = Array.from({ length: 31 }, (_, i) => i + 1);
+  // Helper function to get number of days in current month
+  const getDaysInCurrentMonth = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  };
+
+  // Generate options for due day based on current month
+  const dueDayOptions = Array.from({ length: getDaysInCurrentMonth() }, (_, i) => i + 1);
 
   return (
     <div className="space-y-6">
@@ -274,7 +281,7 @@ function PlannedPayments() {
               />
             </div>
             <div>
-              <label className="block mb-1 font-medium">Due Day (1-31) *</label>
+              <label className="block mb-1 font-medium">Due Day (1 - 30/31) *</label>
               <select
                 name="dueDay"
                 value={form.dueDay}
