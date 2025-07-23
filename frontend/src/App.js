@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import Register from './components/Register';
+import Layout from './components/Layout';
 import TransactionDashboard from './TransactionDashboard';
+import BudgetPlanner from './components/BudgetPlanner';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -63,12 +65,16 @@ function AppContent() {
           </PublicRoute>
         } />
         
-        {/* Protected Routes */}
+        {/* Protected Routes with Layout */}
         <Route path="/dashboard" element={
           <ProtectedRoute>
-            <TransactionDashboard />
+            <Layout />
           </ProtectedRoute>
-        } />
+        }>
+          <Route path="transactions" element={<TransactionDashboard />} />
+          <Route path="budget-planner" element={<BudgetPlanner />} />
+          <Route index element={<Navigate to="transactions" replace />} />
+        </Route>
         
         {/* Default redirect */}
         <Route path="/" element={<Navigate to="/dashboard" />} />

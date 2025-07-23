@@ -11,16 +11,19 @@ backend/
 ├── controllers/             # Controller layer - Business logic
 │   ├── AuthController.js    # Authentication business logic
 │   ├── UserController.js    # User management business logic
-│   └── TransactionController.js # Transaction management business logic
+│   ├── TransactionController.js # Transaction management business logic
+│   └── BudgetController.js  # Budget planning business logic
 ├── middleware/              # Express middleware
 │   └── auth.js             # Authentication middleware
 ├── models/                  # Model layer - Data models
 │   ├── User.js             # User data model with Mongoose schema
-│   └── Transaction.js      # Transaction data model with Mongoose schema
+│   ├── Transaction.js      # Transaction data model with Mongoose schema
+│   └── Budget.js           # Budget data model with Mongoose schema
 ├── routes/                  # Route layer - API endpoints (thin routes)
 │   ├── authRoutes.js       # Authentication routes
 │   ├── userRoutes.js       # User management routes
-│   └── transactionRoutes.js # Transaction management routes
+│   ├── transactionRoutes.js # Transaction management routes
+│   └── budgetRoutes.js     # Budget planning routes
 ├── server.js               # Express server configuration
 └── startServer.bat         # Windows batch file to start server
 ```
@@ -71,6 +74,13 @@ backend/
 - `GET /:id` - Get specific transaction
 - `PUT /:id` - Update transaction
 - `DELETE /:id` - Delete transaction
+
+### Budget Management Routes (`/api/budgets`)
+- `GET /` - Get user's budgets (filterable by month)
+- `POST /` - Create new budget
+- `GET /:id` - Get specific budget
+- `PUT /:id` - Update budget
+- `DELETE /:id` - Delete budget
 
 ## Benefits of This Structure
 
