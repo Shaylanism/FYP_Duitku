@@ -9,6 +9,7 @@ router.use(authMiddleware);
 
 // Budget routes - delegating to controller
 router.post("/", (req, res) => BudgetController.createBudget(req, res));
+router.post("/copy", (req, res) => BudgetController.copyBudgets(req, res));
 router.get("/", (req, res) => BudgetController.getBudgets(req, res));
 router.get("/:id", (req, res) => BudgetController.getBudgetById(req, res));
 router.put("/:id", (req, res) => BudgetController.updateBudget(req, res));

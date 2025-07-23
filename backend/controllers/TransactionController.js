@@ -92,12 +92,28 @@ class TransactionController {
     async getTransactions(req, res) {
         try {
             const userId = req.user._id;
-            const { page = 1, limit = 10, type, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+            const { page = 1, limit = 10, type, month, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
             // Build query
             const query = { user: userId };
             if (type && ['income', 'expense'].includes(type)) {
                 query.type = type;
+            }
+
+            // Add month filtering if provided (YYYY-MM format)
+            if (month) {
+                const monthRegex = /^\d{4}-\d{2}$/;
+                if (monthRegex.test(month)) {
+                    // Create date range for the entire month
+                    const startDate = new Date(`${month}-01T00:00:00.000Z`);
+                    const endDate = new Date(startDate);
+                    endDate.setMonth(endDate.getMonth() + 1);
+                    
+                    query.createdAt = {
+                        $gte: startDate,
+                        $lt: endDate
+                    };
+                }
             }
 
             // Calculate pagination
@@ -114,14 +130,23 @@ class TransactionController {
             // Get total count for pagination
             const total = await Transaction.countDocuments(query);
 
-            // Calculate totals
+            // Calculate totals with same filtering as main query
+            const incomeQuery = { user: userId, type: 'income' };
+            const expenseQuery = { user: userId, type: 'expense' };
+            
+            // Apply month filtering to aggregation queries if present
+            if (query.createdAt) {
+                incomeQuery.createdAt = query.createdAt;
+                expenseQuery.createdAt = query.createdAt;
+            }
+
             const totalIncome = await Transaction.aggregate([
-                { $match: { user: userId, type: 'income' } },
+                { $match: incomeQuery },
                 { $group: { _id: null, total: { $sum: '$amount' } } }
             ]);
 
             const totalExpense = await Transaction.aggregate([
-                { $match: { user: userId, type: 'expense' } },
+                { $match: expenseQuery },
                 { $group: { _id: null, total: { $sum: '$amount' } } }
             ]);
 

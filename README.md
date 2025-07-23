@@ -62,6 +62,10 @@ FYP_Duitku/
 - **Transaction Management** (Income/Expense tracking with CRUD operations)
 - **Financial Summary** (Total Income, Expenses, and Balance calculation)
 - **Transaction Categories** (Organize transactions by categories)
+- **Budget Planning** (Monthly budget setting and tracking)
+- **Budget vs Actual Comparison** (Visual indicators for budget performance)
+- **Month-wise Budget Management** (Past months view-only, current month editable)
+- **Budget Copy Functionality** (Copy budgets from previous months)
 - **Protected Routes** (Authentication middleware)
 - **Responsive UI** (React frontend with modern styling)
 - **MVC Architecture** (Clean code organization)
@@ -149,12 +153,21 @@ startClient.bat
 1. Start the backend server (http://localhost:5000)
 2. Start the frontend application (http://localhost:3000)
 3. Register a new account or login with existing credentials
-4. Access the transaction dashboard to:
+4. Use the sidebar navigation to access:
+
+### 📊 **Transaction Dashboard**
    - View your financial summary (Income, Expenses, Balance)
    - Add new transactions (income or expense)
    - Edit existing transactions
    - Delete transactions
    - Organize transactions by categories
+
+### 📋 **Budget Planner**
+   - Set monthly budgets by category
+   - Compare actual spending vs budgets
+   - View budget status indicators (On Track, Warning, Over Budget)
+   - Copy budgets from previous months
+   - Filter budgets by month (past months are view-only)
 
 ## 🤝 Contributing
 

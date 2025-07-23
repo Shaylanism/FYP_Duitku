@@ -38,7 +38,7 @@ const Layout = () => {
         <div className="flex flex-col h-full">
           {/* Logo/Header */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-800">Personal Finance</h1>
+            <h1 className="text-xl font-bold text-gray-800">Duitku</h1>
             <p className="text-sm text-gray-600">Welcome, {user?.name}</p>
           </div>
 

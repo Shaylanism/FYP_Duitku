@@ -32,6 +32,15 @@ class BudgetController {
                 });
             }
 
+            // Only allow budget creation for current month or future months
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            if (month < currentMonth) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Cannot create budgets for past months. You can only set budgets for the current month or future months."
+                });
+            }
+
             // Create new budget
             const newBudget = new Budget({
                 user: userId,
@@ -156,6 +165,15 @@ class BudgetController {
                         message: "Month must be in YYYY-MM format"
                     });
                 }
+
+                // Only allow budget updates for current month or future months
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                if (month < currentMonth) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Cannot modify budgets for past months. You can only edit budgets for the current month or future months."
+                    });
+                }
             }
 
             // Find budget and ensure it belongs to the user
@@ -164,6 +182,15 @@ class BudgetController {
                 return res.status(404).json({ 
                     success: false, 
                     message: "Budget not found or not authorized" 
+                });
+            }
+
+            // Check if existing budget is from a past month
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            if (budget.month < currentMonth) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Cannot modify budgets for past months. You can only edit budgets for the current month or future months."
                 });
             }
 
@@ -265,6 +292,99 @@ class BudgetController {
             res.status(500).json({ 
                 success: false, 
                 message: "Failed to fetch budget"
+            });
+        }
+    }
+
+    // Copy budgets from source month to current month
+    async copyBudgets(req, res) {
+        try {
+            const { sourceMonth } = req.body;
+            const userId = req.user._id;
+
+            // Validation
+            if (!sourceMonth) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Source month is required"
+                });
+            }
+
+            // Validate month format (YYYY-MM)
+            const monthRegex = /^\d{4}-\d{2}$/;
+            if (!monthRegex.test(sourceMonth)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Source month must be in YYYY-MM format"
+                });
+            }
+
+            const currentMonth = new Date().toISOString().slice(0, 7);
+
+            // Prevent copying from future months or current month
+            if (sourceMonth >= currentMonth) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Can only copy budgets from past months"
+                });
+            }
+
+            // Get budgets from source month
+            const sourceBudgets = await Budget.find({
+                user: userId,
+                month: sourceMonth
+            });
+
+            if (sourceBudgets.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: "No budgets found for the source month"
+                });
+            }
+
+            // Check if current month already has budgets
+            const existingBudgets = await Budget.find({
+                user: userId,
+                month: currentMonth
+            });
+
+            if (existingBudgets.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Current month already has budgets. Please delete existing budgets before copying."
+                });
+            }
+
+            // Create new budgets for current month
+            const newBudgets = sourceBudgets.map(budget => ({
+                user: userId,
+                category: budget.category,
+                budgetAmount: budget.budgetAmount,
+                month: currentMonth
+            }));
+
+            const createdBudgets = await Budget.insertMany(newBudgets);
+
+            res.status(201).json({
+                success: true,
+                message: `Successfully copied ${createdBudgets.length} budgets from ${sourceMonth} to ${currentMonth}`,
+                budgets: createdBudgets
+            });
+
+        } catch (error) {
+            console.error("Error copying budgets:", error.message);
+            
+            // Handle duplicate key error
+            if (error.code === 11000) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Some budgets already exist for the current month"
+                });
+            }
+            
+            res.status(500).json({
+                success: false,
+                message: "Failed to copy budgets"
             });
         }
     }
