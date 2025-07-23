@@ -257,9 +257,6 @@ function BudgetPlanner() {
     return { color: 'red', status: 'Over Budget' };
   };
 
-  const totalBudget = budgets.reduce((sum, budget) => sum + budget.budgetAmount, 0);
-  const totalSpent = Object.values(transactionSummary).reduce((sum, amount) => sum + amount, 0);
-
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -276,36 +273,6 @@ function BudgetPlanner() {
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
             />
-          </div>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="p-4 bg-blue-50 rounded-lg text-center">
-            <h3 className="mb-2 mt-0 text-blue-800">Total Budget</h3>
-            <p className="m-0 text-2xl font-bold text-blue-900">
-              {formatCurrency(totalBudget)}
-            </p>
-          </div>
-          <div className="p-4 bg-orange-50 rounded-lg text-center">
-            <h3 className="mb-2 mt-0 text-orange-800">Total Spent</h3>
-            <p className="m-0 text-2xl font-bold text-orange-900">
-              {formatCurrency(totalSpent)}
-            </p>
-          </div>
-          <div className={`p-4 rounded-lg text-center ${
-            totalSpent <= totalBudget ? 'bg-green-50' : 'bg-red-50'
-          }`}>
-            <h3 className={`mb-2 mt-0 ${
-              totalSpent <= totalBudget ? 'text-green-800' : 'text-red-800'
-            }`}>
-              Remaining
-            </h3>
-            <p className={`m-0 text-2xl font-bold ${
-              totalSpent <= totalBudget ? 'text-green-900' : 'text-red-900'
-            }`}>
-              {formatCurrency(totalBudget - totalSpent)}
-            </p>
           </div>
         </div>
 
