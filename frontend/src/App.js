@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import TransactionDashboard from './TransactionDashboard';
 import BudgetPlanner from './components/BudgetPlanner';
 import PlannedPayments from './components/PlannedPayments';
+import RetirementPlanner from './components/RetirementPlanner';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -75,6 +76,7 @@ function AppContent() {
           <Route path="transactions" element={<TransactionDashboard />} />
           <Route path="budget-planner" element={<BudgetPlanner />} />
           <Route path="planned-payments" element={<PlannedPayments />} />
+          <Route path="retirement-planner" element={<RetirementPlanner />} />
           <Route index element={<Navigate to="transactions" replace />} />
         </Route>
         
