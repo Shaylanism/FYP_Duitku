@@ -8,6 +8,7 @@ import {
   getAvailableMonthsFromItems 
 } from '../utils/monthUtils';
 import MonthFilter from './MonthFilter';
+import BudgetWarningModal from './BudgetWarningModal';
 
 const API_URL = '/api/budgets';
 const TRANSACTIONS_API = '/api/transactions';
@@ -27,6 +28,9 @@ function BudgetPlanner() {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth()); // YYYY-MM format
   const [copyLoading, setCopyLoading] = useState(false);
   const [availableMonths, setAvailableMonths] = useState([]); // Months with existing budgets
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [transactionImpact, setTransactionImpact] = useState(null);
+  const [pendingBudgetData, setPendingBudgetData] = useState(null);
 
   // Fetch available months with existing budgets
   const fetchAvailableMonths = async () => {
@@ -118,6 +122,20 @@ function BudgetPlanner() {
     setForm({ ...form, [name]: value });
   };
 
+  // Check transaction impact before creating budget
+  const checkTransactionImpact = async (category, month) => {
+    try {
+      const res = await axios.get(`${API_URL}/check-impact?category=${encodeURIComponent(category)}&month=${month}`);
+      return res.data;
+    } catch (err) {
+      if (err.response?.data?.budgetExists) {
+        throw new Error(err.response.data.message);
+      }
+      // If error is not about existing budget, return no impact (no transactions)
+      return { hasTransactions: false, totalSpent: 0 };
+    }
+  };
+
   // Add or update budget
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -136,18 +154,54 @@ function BudgetPlanner() {
       return;
     }
 
-    try {
-      const budgetData = {
-        category: form.category,
-        budgetAmount: parseFloat(form.budgetAmount),
-        month: selectedMonth
-      };
+    const budgetData = {
+      category: form.category,
+      budgetAmount: parseFloat(form.budgetAmount),
+      month: selectedMonth
+    };
 
+    try {
+      // If editing, proceed directly without checking transactions
       if (editing) {
         await axios.put(`${API_URL}/${form.id}`, budgetData);
-      } else {
-        await axios.post(API_URL, budgetData);
+        // Reset form
+        setForm({ 
+          category: categories.expense?.[0] || '', 
+          budgetAmount: '', 
+          id: null 
+        });
+        setEditing(false);
+        fetchBudgets();
+        setError('');
+        setLoading(false);
+        return;
       }
+
+      // For new budgets, check transaction impact first
+      const impact = await checkTransactionImpact(form.category, selectedMonth);
+      
+      if (impact.hasTransactions) {
+        // Show warning modal
+        setTransactionImpact(impact);
+        setPendingBudgetData(budgetData);
+        setShowWarningModal(true);
+        setLoading(false);
+        return;
+      }
+
+      // No existing transactions, proceed with budget creation
+      await createBudgetDirectly(budgetData);
+      
+    } catch (err) {
+      setError(err.message || 'Failed to create budget');
+      setLoading(false);
+    }
+  };
+
+  // Create budget directly (used after confirmation or when no transactions exist)
+  const createBudgetDirectly = async (budgetData) => {
+    try {
+      await axios.post(API_URL, budgetData);
       
       // Reset form
       setForm({ 
@@ -158,22 +212,18 @@ function BudgetPlanner() {
       setEditing(false);
       fetchBudgets();
       setError('');
+      setLoading(false);
     } catch (err) {
-      // For now, we'll simulate the behavior since backend doesn't exist yet
+      // Fallback for simulation when backend is not fully connected
       const newBudget = {
         _id: Date.now().toString(),
-        category: form.category,
-        budgetAmount: parseFloat(form.budgetAmount),
-        month: selectedMonth,
+        category: budgetData.category,
+        budgetAmount: budgetData.budgetAmount,
+        month: budgetData.month,
         createdAt: new Date().toISOString()
       };
 
-      if (editing) {
-        setBudgets(prev => prev.map(b => b._id === form.id ? {...newBudget, _id: form.id} : b));
-      } else {
-        setBudgets(prev => [...prev, newBudget]);
-      }
-
+      setBudgets(prev => [...prev, newBudget]);
       setForm({ 
         category: categories.expense?.[0] || '', 
         budgetAmount: '', 
@@ -181,7 +231,25 @@ function BudgetPlanner() {
       });
       setEditing(false);
       setError('');
+      setLoading(false);
     }
+  };
+
+  // Handle modal proceed
+  const handleModalProceed = () => {
+    setShowWarningModal(false);
+    if (pendingBudgetData) {
+      createBudgetDirectly(pendingBudgetData);
+      setPendingBudgetData(null);
+    }
+    setTransactionImpact(null);
+  };
+
+  // Handle modal cancel
+  const handleModalCancel = () => {
+    setShowWarningModal(false);
+    setPendingBudgetData(null);
+    setTransactionImpact(null);
     setLoading(false);
   };
 
@@ -489,6 +557,18 @@ function BudgetPlanner() {
           </div>
         )}
       </div>
+
+      {/* Budget Warning Modal */}
+      <BudgetWarningModal
+        isOpen={showWarningModal}
+        onClose={handleModalCancel}
+        onProceed={handleModalProceed}
+        category={form.category}
+        budgetAmount={parseFloat(form.budgetAmount) || 0}
+        existingSpent={transactionImpact?.totalSpent || 0}
+        transactionCount={transactionImpact?.transactionCount || 0}
+        month={selectedMonth}
+      />
     </div>
   );
 }

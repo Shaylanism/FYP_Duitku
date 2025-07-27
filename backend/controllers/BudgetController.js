@@ -1,4 +1,5 @@
 import Budget from "../models/Budget.js";
+import Transaction from "../models/Transaction.js";
 import mongoose from "mongoose";
 
 class BudgetController {
@@ -292,6 +293,85 @@ class BudgetController {
             res.status(500).json({ 
                 success: false, 
                 message: "Failed to fetch budget"
+            });
+        }
+    }
+
+    // Check transaction impact for budget creation
+    async checkTransactionImpact(req, res) {
+        try {
+            const { category, month } = req.query;
+            const userId = req.user._id;
+
+            // Validation
+            if (!category || !month) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Category and month are required"
+                });
+            }
+
+            // Validate month format (YYYY-MM)
+            const monthRegex = /^\d{4}-\d{2}$/;
+            if (!monthRegex.test(month)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Month must be in YYYY-MM format"
+                });
+            }
+
+            // Check if budget already exists for this category and month
+            const existingBudget = await Budget.findOne({
+                user: userId,
+                category: category.trim(),
+                month
+            });
+
+            if (existingBudget) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Budget already exists for this category in the selected month",
+                    budgetExists: true
+                });
+            }
+
+            // Create date range for the entire month
+            const startDate = new Date(`${month}-01T00:00:00.000Z`);
+            const endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + 1);
+
+            // Get existing transactions for this category and month
+            const transactions = await Transaction.find({
+                user: userId,
+                category: category.trim(),
+                type: 'expense', // Only expense transactions affect budget
+                createdAt: {
+                    $gte: startDate,
+                    $lt: endDate
+                }
+            });
+
+            // Calculate total spent amount
+            const totalSpent = transactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+
+            res.status(200).json({
+                success: true,
+                hasTransactions: transactions.length > 0,
+                transactionCount: transactions.length,
+                totalSpent,
+                transactions: transactions.map(t => ({
+                    _id: t._id,
+                    amount: t.amount,
+                    description: t.description,
+                    createdAt: t.createdAt
+                }))
+            });
+
+        } catch (error) {
+            console.error("Error checking transaction impact:", error.message);
+            res.status(500).json({
+                success: false,
+                message: "Failed to check transaction impact"
             });
         }
     }
