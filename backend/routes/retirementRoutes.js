@@ -9,8 +9,7 @@ router.use(authMiddleware);
 
 // Retirement plan routes - delegating to controller
 router.post("/calculate", (req, res) => RetirementPlanController.calculateRetirementPlan(req, res));
-router.get("/", (req, res) => RetirementPlanController.getRetirementPlans(req, res));
-router.get("/:id", (req, res) => RetirementPlanController.getRetirementPlanById(req, res));
-router.delete("/:id", (req, res) => RetirementPlanController.deleteRetirementPlan(req, res));
+router.get("/", (req, res) => RetirementPlanController.getRetirementPlan(req, res));
+router.delete("/", (req, res) => RetirementPlanController.deleteRetirementPlan(req, res));
 
 export default router; 

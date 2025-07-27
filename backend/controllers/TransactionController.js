@@ -92,12 +92,17 @@ class TransactionController {
     async getTransactions(req, res) {
         try {
             const userId = req.user._id;
-            const { page = 1, limit = 10, type, month, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+            const { page = 1, limit = 10, type, category, month, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
             // Build query
             const query = { user: userId };
             if (type && ['income', 'expense'].includes(type)) {
                 query.type = type;
+            }
+
+            // Add category filtering if provided
+            if (category && category.trim() !== '') {
+                query.category = category;
             }
 
             // Add month filtering if provided (YYYY-MM format)
@@ -138,6 +143,12 @@ class TransactionController {
             if (query.createdAt) {
                 incomeQuery.createdAt = query.createdAt;
                 expenseQuery.createdAt = query.createdAt;
+            }
+
+            // Apply category filtering to aggregation queries if present
+            if (query.category) {
+                incomeQuery.category = query.category;
+                expenseQuery.category = query.category;
             }
 
             const totalIncome = await Transaction.aggregate([

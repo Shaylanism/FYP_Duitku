@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 
 // Define predefined categories for each transaction type
-const INCOME_CATEGORIES = ['Salary', 'Rental', 'Sale', 'Refund'];
-const EXPENSE_CATEGORIES = ['Car', 'Fuel', 'Food & Beverages', 'Home', 'Bills', 'Health', 'Education', 'Transportation', 'Entertainment', 'Shopping', 'Insurance', 'Tax'];
+const INCOME_CATEGORIES = ['Salary', 'Rental', 'Sale', 'Refund', 'Others'];
+const EXPENSE_CATEGORIES = ['Car', 'Fuel', 'Food & Beverages', 'Home', 'Bills', 'Health', 'Education', 'Transportation', 'Entertainment', 'Shopping', 'Insurance', 'Tax', 'Others'];
 
 const transactionSchema = new mongoose.Schema({
     user: {

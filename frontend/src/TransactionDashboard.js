@@ -94,6 +94,8 @@ function TransactionDashboard() {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const [filterType, setFilterType] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
   const { user } = useAuth();
 
   // Fetch categories
@@ -113,11 +115,15 @@ function TransactionDashboard() {
     }
   };
 
-  // Fetch transactions with month filter
-  const fetchTransactions = async (month = selectedMonth) => {
+  // Fetch transactions with filters
+  const fetchTransactions = async (month = selectedMonth, type = filterType, category = filterCategory) => {
     setLoading(true);
     try {
-      const params = month ? { month } : {};
+      const params = {};
+      if (month) params.month = month;
+      if (type) params.type = type;
+      if (category) params.category = category;
+      
       const res = await axios.get(API_URL, { params });
       setTransactions(res.data.transactions);
       setSummary(res.data.summary);
@@ -136,7 +142,7 @@ function TransactionDashboard() {
   // Handle month change
   const handleMonthChange = (newMonth) => {
     setSelectedMonth(newMonth);
-    fetchTransactions(newMonth);
+    fetchTransactions(newMonth, filterType, filterCategory);
     
     // Cancel editing when switching months to prevent confusion
     if (editing) {
@@ -149,6 +155,13 @@ function TransactionDashboard() {
       });
       setEditing(false);
     }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (newType, newCategory) => {
+    setFilterType(newType);
+    setFilterCategory(newCategory);
+    fetchTransactions(selectedMonth, newType, newCategory);
   };
 
   // Handle form input
@@ -212,7 +225,7 @@ function TransactionDashboard() {
         id: null 
       });
       setEditing(false);
-      fetchTransactions();
+      fetchTransactions(selectedMonth, filterType, filterCategory);
       setError('');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save transaction');
@@ -241,7 +254,7 @@ function TransactionDashboard() {
     setLoading(true);
     try {
       await axios.delete(`${API_URL}/${id}`);
-      fetchTransactions();
+      fetchTransactions(selectedMonth, filterType, filterCategory);
       setError('');
     } catch (err) {
       setError('Failed to delete transaction');
@@ -407,6 +420,57 @@ function TransactionDashboard() {
 
       {error && <div className="text-red-700 mb-3 p-2 bg-red-50 rounded">{error}</div>}
       
+      {/* Filter Controls */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <h3 className="text-lg font-semibold text-gray-800 mb-3">Filter Transactions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block mb-1 font-medium text-gray-700">Transaction Type</label>
+            <select
+              value={filterType}
+              onChange={(e) => handleFilterChange(e.target.value, filterCategory)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-gray-700">Category</label>
+            <select
+              value={filterCategory}
+              onChange={(e) => handleFilterChange(filterType, e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Categories</option>
+              {filterType === 'income' && categories.income.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+              {filterType === 'expense' && categories.expense.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+              {!filterType && [
+                ...categories.income.map(cat => <option key={`income-${cat}`} value={cat}>{cat} (Income)</option>),
+                ...categories.expense.map(cat => <option key={`expense-${cat}`} value={cat}>{cat} (Expense)</option>)
+              ]}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setFilterType('');
+                setFilterCategory('');
+                fetchTransactions(selectedMonth, '', '');
+              }}
+              className="w-full px-4 py-2 bg-gray-600 text-white border-none rounded cursor-pointer hover:bg-gray-700 transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Transactions Table */}
       {loading && !transactions.length ? (
         <div className="text-center py-5">Loading...</div>

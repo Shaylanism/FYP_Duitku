@@ -3,6 +3,46 @@ import axios from 'axios';
 
 const API_URL = '/api/retirement';
 
+// Reusable Tooltip Component
+const Tooltip = ({ text, children }) => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  return (
+    <div className="relative inline-block">
+      <div
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+        className="cursor-help"
+      >
+        {children}
+      </div>
+      {isVisible && (
+        <div className="absolute z-10 w-64 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg -top-2 left-6 transform -translate-y-full">
+          <div className="absolute w-2 h-2 bg-gray-800 transform rotate-45 left-2 top-full -translate-y-1"></div>
+          {text}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Info Icon Component
+const InfoIcon = ({ tooltipText }) => (
+  <Tooltip text={tooltipText}>
+    <svg 
+      className="w-4 h-4 text-gray-400 hover:text-gray-600 ml-1 inline-block" 
+      fill="currentColor" 
+      viewBox="0 0 20 20"
+    >
+      <path 
+        fillRule="evenodd" 
+        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
+        clipRule="evenodd" 
+      />
+    </svg>
+  </Tooltip>
+);
+
 function RetirementPlanner() {
   const [form, setForm] = useState({
     currentAge: '',
@@ -25,21 +65,50 @@ function RetirementPlanner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [existingPlan, setExistingPlan] = useState(null);
+  const [hasExistingPlan, setHasExistingPlan] = useState(false);
 
-  // Fetch calculation history
-  const fetchHistory = async () => {
+  // Fetch existing retirement plan
+  const fetchExistingPlan = async () => {
     try {
-      const res = await axios.get(`${API_URL}?limit=5`);
-      setHistory(res.data.retirementPlans || []);
+      const res = await axios.get(API_URL);
+      if (res.data.success) {
+        const plan = res.data.retirementPlan;
+        setExistingPlan(plan);
+        setHasExistingPlan(true);
+        setResult(plan);
+        
+        // Populate form with existing plan data
+        setForm({
+          currentAge: plan.currentAge || '',
+          retirementAge: plan.retirementAge || 60,
+          lifeExpectancy: plan.lifeExpectancy || 80,
+          currentSalary: plan.currentSalary || '',
+          epfBalance: plan.epfBalance || '',
+          prsBalance: plan.prsBalance || '',
+          monthlyContributionPrs: plan.monthlyContributionPrs || '',
+          monthlyContributionPrsPercentage: plan.monthlyContributionPrsPercentage || '',
+          monthlyEpfContributionRate: plan.monthlyEpfContributionRate || 23,
+          targetMonthlyIncomeInput: plan.targetMonthlyIncomeInput || '',
+          preRetirementReturn: plan.preRetirementReturn || 4.0,
+          postRetirementReturn: plan.postRetirementReturn || 4.0,
+          inflationRate: plan.inflationRate || 3.0,
+          enableSalaryIncrements: plan.enableSalaryIncrements !== undefined ? plan.enableSalaryIncrements : true,
+          salaryIncrementRate: plan.salaryIncrementRate || 3.0
+        });
+      }
     } catch (err) {
-      console.error('Failed to fetch retirement plan history:', err);
+      // If no plan exists (404), that's fine - user will create a new one
+      if (err.response?.status !== 404) {
+        console.error('Failed to fetch existing retirement plan:', err);
+      }
+      setHasExistingPlan(false);
+      setExistingPlan(null);
     }
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchExistingPlan();
   }, []);
 
   const handleChange = (e) => {
@@ -79,9 +148,9 @@ function RetirementPlanner() {
       
       if (res.data.success) {
         setResult(res.data.retirementPlan);
+        setExistingPlan(res.data.retirementPlan);
+        setHasExistingPlan(true);
         setError('');
-        // Refresh history
-        fetchHistory();
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to calculate retirement plan');
@@ -89,6 +158,44 @@ function RetirementPlanner() {
     }
     
     setLoading(false);
+  };
+
+  const handleDeletePlan = async () => {
+    if (!window.confirm('Are you sure you want to delete your retirement plan? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(API_URL);
+      
+      // Reset the component state
+      setResult(null);
+      setExistingPlan(null);
+      setHasExistingPlan(false);
+      
+      // Reset form to default values
+      setForm({
+        currentAge: '',
+        retirementAge: 60,
+        lifeExpectancy: 80,
+        currentSalary: '',
+        epfBalance: '',
+        prsBalance: '',
+        monthlyContributionPrs: '',
+        monthlyContributionPrsPercentage: '',
+        monthlyEpfContributionRate: 23,
+        targetMonthlyIncomeInput: '',
+        preRetirementReturn: 4.0,
+        postRetirementReturn: 4.0,
+        inflationRate: 3.0,
+        enableSalaryIncrements: true,
+        salaryIncrementRate: 3.0
+      });
+      
+      alert('Retirement plan deleted successfully');
+    } catch (err) {
+      alert('Failed to delete retirement plan');
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -107,29 +214,35 @@ function RetirementPlanner() {
     return salary * (percentage / 100);
   };
 
-  const deleteCalculation = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/${id}`);
-      fetchHistory();
-      if (result && result._id === id) {
-        setResult(null);
-      }
-    } catch (err) {
-      alert('Failed to delete calculation');
-    }
-  };
-
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Retirement Planner</h1>
         <p className="text-gray-600">Plan your retirement fund by calculating how much you need to save for a comfortable retirement.</p>
+        {hasExistingPlan && (
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-800 text-sm">
+              You have an existing retirement plan from {new Date(existingPlan?.calculationDate).toLocaleDateString()}. 
+              Modify the values below and recalculate to update your plan.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Input Form */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Financial Details</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Financial Details</h2>
+            {hasExistingPlan && (
+              <button
+                onClick={handleDeletePlan}
+                className="text-red-600 hover:text-red-800 text-sm font-medium"
+              >
+                Delete Plan
+              </button>
+            )}
+          </div>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Personal Information */}
@@ -153,6 +266,7 @@ function RetirementPlanner() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Retirement Age *
+                  <InfoIcon tooltipText="The age at which you plan to stop working. This determines how many years you have to save and accumulate retirement funds. Earlier retirement requires more aggressive saving." />
                 </label>
                 <input
                   type="number"
@@ -169,6 +283,7 @@ function RetirementPlanner() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Life Expectancy *
+                  <InfoIcon tooltipText="How long you expect to live, which determines how long your retirement fund needs to last. A longer life expectancy means you need more savings to maintain your lifestyle throughout retirement." />
                 </label>
                 <input
                   type="number"
@@ -188,6 +303,7 @@ function RetirementPlanner() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Current Monthly Salary (RM) *
+                  <InfoIcon tooltipText="Your current gross monthly salary before deductions. This is used to calculate EPF contributions, PRS contributions (if percentage-based), and project future salary growth for retirement planning." />
                 </label>
                 <input
                   type="number"
@@ -204,6 +320,7 @@ function RetirementPlanner() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Current EPF Balance (RM)
+                  <InfoIcon tooltipText="Your existing EPF (Employees Provident Fund) balance. This amount will grow at an average rate of 4% annually and be included in your total retirement savings projection." />
                 </label>
                 <input
                   type="number"
@@ -238,6 +355,7 @@ function RetirementPlanner() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Annual Salary Increment Rate (%)
+                      <InfoIcon tooltipText="The expected annual percentage increase in your salary until retirement. This affects your EPF contributions and PRS contributions (if percentage-based), leading to higher retirement savings. Conservative estimate is 3-5%." />
                     </label>
                     <input
                       type="number"
@@ -268,6 +386,7 @@ function RetirementPlanner() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Monthly EPF Contribution Rate (%)
+                  <InfoIcon tooltipText="The total EPF contribution rate (employee + employer). The standard Malaysian rate is 23% (11% employee + 12% employer). Higher rates mean more retirement savings through EPF." />
                 </label>
                 <input
                   type="number"
@@ -287,6 +406,7 @@ function RetirementPlanner() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Current PRS/Other Savings (RM)
+                  <InfoIcon tooltipText="Your existing Private Retirement Scheme (PRS) balance or other investment savings. This amount will grow based on your selected pre-retirement return rate and contribute to your total retirement fund." />
                 </label>
                 <input
                   type="number"
@@ -302,6 +422,7 @@ function RetirementPlanner() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Monthly PRS Contribution (%)
+                  <InfoIcon tooltipText="Monthly contribution to PRS as a percentage of your salary. This creates additional retirement savings beyond EPF. If salary increments are enabled, this contribution will grow with your salary over time." />
                 </label>
                 <input
                   type="number"
@@ -331,6 +452,7 @@ function RetirementPlanner() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Target Monthly Retirement Income (RM)
+                <InfoIcon tooltipText="Your desired monthly income during retirement in today's purchasing power. This determines how much total funds you need at retirement. If not specified, the system uses 2/3 of your final salary as the target." />
               </label>
               <input
                 type="number"
@@ -343,7 +465,7 @@ function RetirementPlanner() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Optional: Your desired monthly income in <strong>today's purchasing power</strong> throughout retirement. The actual amounts will increase with inflation (e.g., RM5,000 today becomes ~RM6,200 in 10 years at 3% inflation). If left empty, we'll calculate 2/3 of your projected final salary.
+                Optional: Your desired monthly income in <strong>today's purchasing power</strong> throughout retirement. If left empty, we'll calculate 2/3 of your projected final salary.
               </p>
             </div>
 
@@ -354,6 +476,7 @@ function RetirementPlanner() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Pre-Retirement Return (%)
+                    <InfoIcon tooltipText="Expected annual investment return rate before retirement. This affects how your PRS contributions and existing savings grow. EPF uses a fixed 4% rate. Higher returns accelerate wealth accumulation." />
                   </label>
                   <input
                     type="number"
@@ -370,6 +493,7 @@ function RetirementPlanner() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Post-Retirement Return (%)
+                    <InfoIcon tooltipText="Expected annual investment return rate during retirement. This determines how long your retirement fund will last. Conservative portfolios typically have lower but more stable returns during retirement." />
                   </label>
                   <input
                     type="number"
@@ -386,6 +510,7 @@ function RetirementPlanner() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Inflation Rate (%)
+                    <InfoIcon tooltipText="Expected annual increase in cost of living. This ensures your retirement income maintains purchasing power over time. Higher inflation requires more total savings to maintain the same lifestyle." />
                   </label>
                   <input
                     type="number"
@@ -412,7 +537,7 @@ function RetirementPlanner() {
               disabled={loading}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {loading ? 'Calculating...' : 'Calculate Retirement Plan'}
+              {loading ? 'Calculating...' : hasExistingPlan ? 'Update Retirement Plan' : 'Calculate Retirement Plan'}
             </button>
           </form>
         </div>
@@ -421,7 +546,14 @@ function RetirementPlanner() {
         <div className="space-y-6">
           {result && (
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Retirement Plan Results</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Retirement Plan Results</h2>
+                {hasExistingPlan && (
+                  <p className="text-sm text-gray-600">
+                    Last updated: {new Date(result.calculationDate).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="bg-blue-50 p-4 rounded-lg">
@@ -497,60 +629,6 @@ function RetirementPlanner() {
                 </div>
             </div>
           )}
-
-          {/* History Toggle */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Calculation History</h2>
-              <button
-                onClick={() => setShowHistory(!showHistory)}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                {showHistory ? 'Hide' : 'Show'} History
-              </button>
-            </div>
-            
-            {showHistory && (
-              <div className="space-y-3">
-                {history.length === 0 ? (
-                  <p className="text-gray-500">No previous calculations found.</p>
-                ) : (
-                  history.map((plan) => (
-                    <div key={plan._id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">
-                            Age {plan.currentAge} to {plan.retirementAge} (retire in {plan.yearsToRetirement} years)
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Target: {formatCurrency(plan.targetMonthlyIncome)}/month
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            EPF Rate: {plan.monthlyEpfContributionRate || 23}% | Monthly EPF: {formatCurrency(plan.monthlyEpfContribution || 0)}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Salary Growth: {plan.enableSalaryIncrements !== false 
-                              ? `${plan.salaryIncrementRate || 3}% annually` 
-                              : 'No increments'
-                            }
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(plan.calculationDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => deleteCalculation(plan._id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

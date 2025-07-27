@@ -2,7 +2,7 @@ import RetirementPlan from "../models/RetirementPlan.js";
 import mongoose from "mongoose";
 
 class RetirementPlanController {
-    // Calculate retirement plan
+    // Calculate retirement plan (create or update existing)
     async calculateRetirementPlan(req, res) {
         try {
             const {
@@ -107,8 +107,10 @@ class RetirementPlanController {
                 salaryIncrementRate
             });
 
-            // Create new retirement plan
-            const newRetirementPlan = new RetirementPlan({
+            // Check if user already has a retirement plan
+            const existingPlan = await RetirementPlan.findOne({ user: userId });
+
+            const planData = {
                 user: userId,
                 currentAge,
                 retirementAge,
@@ -125,14 +127,27 @@ class RetirementPlanController {
                 inflationRate,
                 enableSalaryIncrements,
                 salaryIncrementRate,
+                calculationDate: new Date(), // Update calculation date
                 ...calculations
-            });
+            };
 
-            const savedPlan = await newRetirementPlan.save();
+            let savedPlan;
+            if (existingPlan) {
+                // Update existing plan
+                savedPlan = await RetirementPlan.findOneAndUpdate(
+                    { user: userId },
+                    planData,
+                    { new: true, runValidators: true }
+                );
+            } else {
+                // Create new plan
+                const newRetirementPlan = new RetirementPlan(planData);
+                savedPlan = await newRetirementPlan.save();
+            }
 
-            res.status(201).json({
+            res.status(existingPlan ? 200 : 201).json({
                 success: true,
-                message: "Retirement plan calculated successfully",
+                message: existingPlan ? "Retirement plan updated successfully" : "Retirement plan created successfully",
                 retirementPlan: savedPlan
             });
 
@@ -339,53 +354,17 @@ class RetirementPlanController {
         };
     }
 
-    // Get user's retirement plans (history)
-    async getRetirementPlans(req, res) {
+    // Get user's retirement plan (single plan)
+    async getRetirementPlan(req, res) {
         try {
             const userId = req.user._id;
-            const limit = parseInt(req.query.limit) || 10;
 
-            const retirementPlans = await RetirementPlan.find({ user: userId })
-                .sort({ calculationDate: -1 })
-                .limit(limit);
-
-            res.status(200).json({
-                success: true,
-                retirementPlans
-            });
-
-        } catch (err) {
-            console.error("Error fetching retirement plans:", err);
-            res.status(500).json({
-                success: false,
-                message: "Failed to fetch retirement plans",
-                error: err.message
-            });
-        }
-    }
-
-    // Get retirement plan by ID
-    async getRetirementPlanById(req, res) {
-        try {
-            const { id } = req.params;
-            const userId = req.user._id;
-
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Invalid retirement plan ID"
-                });
-            }
-
-            const retirementPlan = await RetirementPlan.findOne({
-                _id: id,
-                user: userId
-            });
+            const retirementPlan = await RetirementPlan.findOne({ user: userId });
 
             if (!retirementPlan) {
                 return res.status(404).json({
                     success: false,
-                    message: "Retirement plan not found"
+                    message: "No retirement plan found"
                 });
             }
 
@@ -404,28 +383,17 @@ class RetirementPlanController {
         }
     }
 
-    // Delete retirement plan
+    // Delete user's retirement plan
     async deleteRetirementPlan(req, res) {
         try {
-            const { id } = req.params;
             const userId = req.user._id;
 
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Invalid retirement plan ID"
-                });
-            }
-
-            const deletedPlan = await RetirementPlan.findOneAndDelete({
-                _id: id,
-                user: userId
-            });
+            const deletedPlan = await RetirementPlan.findOneAndDelete({ user: userId });
 
             if (!deletedPlan) {
                 return res.status(404).json({
                     success: false,
-                    message: "Retirement plan not found"
+                    message: "No retirement plan found to delete"
                 });
             }
 
