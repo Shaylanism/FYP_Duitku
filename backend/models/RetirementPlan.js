@@ -48,6 +48,13 @@ const retirementPlanSchema = new mongoose.Schema({
         min: 0,
         default: 0
     },
+    monthlyContributionPrsPercentage: {
+        type: Number,
+        required: false,
+        min: 0,
+        max: 20,
+        default: 0 // Default 0% if not specified
+    },
     monthlyEpfContributionRate: {
         type: Number,
         required: false,
@@ -81,6 +88,19 @@ const retirementPlanSchema = new mongoose.Schema({
         type: Number,
         required: false,
         min: 0
+    },
+    // Salary increment preferences
+    enableSalaryIncrements: {
+        type: Boolean,
+        required: false,
+        default: true // Default to enabled for backward compatibility
+    },
+    salaryIncrementRate: {
+        type: Number,
+        required: false,
+        min: 0,
+        max: 20,
+        default: 3.0 // Default 3% increment rate
     },
     // Calculated results
     lastDrawnSalary: {

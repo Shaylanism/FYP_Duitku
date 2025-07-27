@@ -12,11 +12,14 @@ function RetirementPlanner() {
     epfBalance: '',
     prsBalance: '',
     monthlyContributionPrs: '',
+    monthlyContributionPrsPercentage: '',
     monthlyEpfContributionRate: 23,
     targetMonthlyIncomeInput: '',
     preRetirementReturn: 4.0,
     postRetirementReturn: 4.0,
-    inflationRate: 3.0
+    inflationRate: 3.0,
+    enableSalaryIncrements: true,
+    salaryIncrementRate: 3.0
   });
   
   const [loading, setLoading] = useState(false);
@@ -40,10 +43,10 @@ function RetirementPlanner() {
   }, []);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setForm(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
@@ -62,11 +65,14 @@ function RetirementPlanner() {
         epfBalance: parseFloat(form.epfBalance) || 0,
         prsBalance: parseFloat(form.prsBalance) || 0,
         monthlyContributionPrs: parseFloat(form.monthlyContributionPrs) || 0,
+        monthlyContributionPrsPercentage: parseFloat(form.monthlyContributionPrsPercentage) || 0,
         monthlyEpfContributionRate: parseFloat(form.monthlyEpfContributionRate) || 23,
         targetMonthlyIncomeInput: form.targetMonthlyIncomeInput ? parseFloat(form.targetMonthlyIncomeInput) : null,
         preRetirementReturn: parseFloat(form.preRetirementReturn),
         postRetirementReturn: parseFloat(form.postRetirementReturn),
-        inflationRate: parseFloat(form.inflationRate)
+        inflationRate: parseFloat(form.inflationRate),
+        enableSalaryIncrements: form.enableSalaryIncrements,
+        salaryIncrementRate: parseFloat(form.salaryIncrementRate)
       };
 
       const res = await axios.post(`${API_URL}/calculate`, calculationData);
@@ -92,6 +98,13 @@ function RetirementPlanner() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(amount);
+  };
+
+  // Calculate real-time PRS contribution amount from percentage
+  const calculatePrsContributionAmount = () => {
+    const salary = parseFloat(form.currentSalary) || 0;
+    const percentage = parseFloat(form.monthlyContributionPrsPercentage) || 0;
+    return salary * (percentage / 100);
   };
 
   const deleteCalculation = async (id) => {
@@ -202,7 +215,56 @@ function RetirementPlanner() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              
+            </div>
+
+            {/* Salary Increment Options */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Salary Growth Projections</h3>
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="enableSalaryIncrements"
+                    checked={form.enableSalaryIncrements}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label className="ml-2 block text-sm font-medium text-gray-700">
+                    Apply annual salary increments
+                  </label>
+                </div>
+                
+                {form.enableSalaryIncrements && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Annual Salary Increment Rate (%)
+                    </label>
+                    <input
+                      type="number"
+                      name="salaryIncrementRate"
+                      value={form.salaryIncrementRate}
+                      onChange={handleChange}
+                      min="0"
+                      max="20"
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Typical range: 3-7% annually. Leave at 3% for conservative estimates.
+                    </p>
+                  </div>
+                )}
+                
+                <p className="text-xs text-gray-600">
+                  {form.enableSalaryIncrements 
+                    ? `Your salary will increase by ${form.salaryIncrementRate}% annually until retirement.`
+                    : 'Your salary will remain constant at the current level until retirement.'
+                  }
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Monthly EPF Contribution Rate (%)
@@ -221,9 +283,7 @@ function RetirementPlanner() {
                   Standard rate: 23% (11% employee + 12% employer). Maximum: 30%
                 </p>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Current PRS/Other Savings (RM)
@@ -241,17 +301,29 @@ function RetirementPlanner() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Monthly PRS Contribution (RM)
+                  Monthly PRS Contribution (%)
                 </label>
                 <input
                   type="number"
-                  name="monthlyContributionPrs"
-                  value={form.monthlyContributionPrs}
+                  name="monthlyContributionPrsPercentage"
+                  value={form.monthlyContributionPrsPercentage}
                   onChange={handleChange}
                   min="0"
-                  step="0.01"
+                  max="20"
+                  step="0.1"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Percentage of your current salary. Maximum: 20%
+                </p>
+                {form.currentSalary && form.monthlyContributionPrsPercentage && (
+                  <p className="text-xs text-blue-600 mt-1 font-medium">
+                    Current contribution amount: {formatCurrency(calculatePrsContributionAmount())} per month
+                    {form.enableSalaryIncrements && (
+                      <span className="text-gray-500"> (will increase with salary)</span>
+                    )}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -271,7 +343,7 @@ function RetirementPlanner() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Optional: Specify your desired monthly income during retirement. If left empty, we'll calculate 2/3 of your projected final salary.
+                Optional: Your desired monthly income in <strong>today's purchasing power</strong> throughout retirement. The actual amounts will increase with inflation (e.g., RM5,000 today becomes ~RM6,200 in 10 years at 3% inflation). If left empty, we'll calculate 2/3 of your projected final salary.
               </p>
             </div>
 
@@ -355,7 +427,13 @@ function RetirementPlanner() {
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h3 className="font-medium text-blue-900">Last Drawn Salary</h3>
                   <p className="text-2xl font-bold text-blue-700">{formatCurrency(result.lastDrawnSalary)}</p>
-                  <p className="text-sm text-blue-600">At retirement age</p>
+                  <p className="text-sm text-blue-600">
+                    At retirement age
+                    {result.enableSalaryIncrements 
+                      ? ` (${result.salaryIncrementRate}% annual growth)` 
+                      : ' (no increments applied)'
+                    }
+                  </p>
                 </div>
                 
                 <div className="bg-purple-50 p-4 rounded-lg">
@@ -380,7 +458,7 @@ function RetirementPlanner() {
                 <div className="bg-orange-50 p-4 rounded-lg">
                   <h3 className="font-medium text-orange-900">Total Funds Needed</h3>
                   <p className="text-2xl font-bold text-orange-700">{formatCurrency(result.totalFundsNeeded)}</p>
-                  <p className="text-sm text-orange-600">At retirement</p>
+                  <p className="text-sm text-orange-600">At retirement (inflation-adjusted for purchasing power)</p>
                 </div>
               </div>
 
@@ -449,6 +527,12 @@ function RetirementPlanner() {
                           </p>
                           <p className="text-sm text-gray-600">
                             EPF Rate: {plan.monthlyEpfContributionRate || 23}% | Monthly EPF: {formatCurrency(plan.monthlyEpfContribution || 0)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Salary Growth: {plan.enableSalaryIncrements !== false 
+                              ? `${plan.salaryIncrementRate || 3}% annually` 
+                              : 'No increments'
+                            }
                           </p>
                           <p className="text-sm text-gray-600">
                             {new Date(plan.calculationDate).toLocaleDateString()}
