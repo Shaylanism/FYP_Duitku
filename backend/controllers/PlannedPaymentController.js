@@ -1,7 +1,12 @@
 import PlannedPayment from "../models/PlannedPayment.js";
 import Transaction from "../models/Transaction.js";
 import mongoose from "mongoose";
-import { getDaysInCurrentMonth, isValidDueDayForCurrentMonth } from "../utils/dateUtils.js";
+import { 
+    getDaysInCurrentMonth, 
+    isValidDueDayForCurrentMonth, 
+    isDueDayInPast,
+    getNextMonthDueDate 
+} from "../utils/dateUtils.js";
 
 class PlannedPaymentController {
     // Create planned payment
@@ -18,10 +23,26 @@ class PlannedPaymentController {
                 });
             }
 
+            // Validate title length
+            if (title.trim().length > 40) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Title cannot exceed 40 characters"
+                });
+            }
+
             if (amount <= 0) {
                 return res.status(400).json({ 
                     success: false, 
                     message: "Amount must be greater than 0" 
+                });
+            }
+
+            // Validate description length if provided
+            if (description && description.trim().length > 30) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Description cannot exceed 30 characters"
                 });
             }
 
@@ -34,6 +55,10 @@ class PlannedPaymentController {
                 });
             }
 
+            // Check if due day is in the past
+            const isInPast = isDueDayInPast(parseInt(dueDay));
+            let initialTransaction = null;
+            
             // Create new planned payment
             const newPlannedPayment = new PlannedPayment({
                 user: userId,
@@ -41,18 +66,38 @@ class PlannedPaymentController {
                 description: description ? description.trim() : '',
                 amount: parseFloat(amount),
                 category: category.trim(),
-                dueDay: parseInt(dueDay)
+                dueDay: parseInt(dueDay),
+                // If due day is in past, mark as settled immediately
+                lastSettledDate: isInPast ? new Date() : null
             });
             
             await newPlannedPayment.save();
+
+            // If due day is in past, create an initial transaction
+            if (isInPast) {
+                initialTransaction = new Transaction({
+                    user: userId,
+                    type: 'expense',
+                    amount: parseFloat(amount),
+                    description: `${title.trim()} - Auto-settled (Past Due Date)${description ? ` - ${description.trim()}` : ''}`,
+                    category: category.trim()
+                });
+                await initialTransaction.save();
+            }
             
             // Populate user info for response
             await newPlannedPayment.populate('user', 'name email');
+
+            // Calculate next due date for response
+            const nextDueDate = isInPast ? getNextMonthDueDate(parseInt(dueDay)) : null;
             
             res.status(201).json({ 
                 success: true, 
                 message: "Planned payment created successfully", 
-                plannedPayment: newPlannedPayment 
+                plannedPayment: newPlannedPayment,
+                autoSettled: isInPast,
+                nextDueDate: nextDueDate,
+                initialTransaction: initialTransaction
             });
         } catch (error) {
             console.error("Error creating planned payment:", error.message);
@@ -67,19 +112,10 @@ class PlannedPaymentController {
     async getPlannedPayments(req, res) {
         try {
             const userId = req.user._id;
-            const { status, page = 1, limit = 10, sortBy = 'dueDay', sortOrder = 'asc' } = req.query;
+            const { page = 1, limit = 10, sortBy = 'dueDay', sortOrder = 'asc' } = req.query;
 
             // Build query
             const query = { user: userId };
-            
-            // Filter by status if provided
-            if (status) {
-                if (status === 'active') {
-                    query.isActive = true;
-                } else if (status === 'inactive') {
-                    query.isActive = false;
-                }
-            }
 
             // Calculate pagination
             const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -105,13 +141,13 @@ class PlannedPaymentController {
             const total = await PlannedPayment.countDocuments(query);
 
             // Calculate summary statistics
-            const activePayments = await PlannedPayment.find({ user: userId, isActive: true });
+            const allPayments = await PlannedPayment.find({ user: userId });
             let totalMonthlyAmount = 0;
             let overdueCount = 0;
             let settledCount = 0;
             let pendingCount = 0;
 
-            activePayments.forEach(payment => {
+            allPayments.forEach(payment => {
                 totalMonthlyAmount += payment.amount;
                 const status = payment.getStatus();
                 if (status === 'overdue') overdueCount++;
@@ -134,7 +170,7 @@ class PlannedPaymentController {
                     overdueCount,
                     settledCount,
                     pendingCount,
-                    activeCount: activePayments.length
+                    totalCount: allPayments.length
                 }
             });
         } catch (error) {
@@ -150,7 +186,7 @@ class PlannedPaymentController {
     async updatePlannedPayment(req, res) {
         try {
             const { id } = req.params;
-            const { title, description, amount, category, dueDay, isActive } = req.body;
+            const { title, description, amount, category, dueDay } = req.body;
             const userId = req.user._id;
 
             if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -165,6 +201,22 @@ class PlannedPaymentController {
                 return res.status(400).json({ 
                     success: false, 
                     message: "Amount must be greater than 0" 
+                });
+            }
+
+            // Validate title length if provided
+            if (title && title.trim().length > 40) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Title cannot exceed 40 characters"
+                });
+            }
+
+            // Validate description length if provided
+            if (description !== undefined && description.trim().length > 30) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Description cannot exceed 30 characters"
                 });
             }
 
@@ -194,7 +246,6 @@ class PlannedPaymentController {
             if (amount) plannedPayment.amount = parseFloat(amount);
             if (category) plannedPayment.category = category.trim();
             if (dueDay) plannedPayment.dueDay = parseInt(dueDay);
-            if (isActive !== undefined) plannedPayment.isActive = isActive;
 
             await plannedPayment.save();
             await plannedPayment.populate('user', 'name email');
@@ -280,12 +331,7 @@ class PlannedPaymentController {
                 });
             }
 
-            if (!plannedPayment.isActive) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Cannot settle an inactive planned payment"
-                });
-            }
+
 
             // Check if already settled this month
             if (!plannedPayment.isDueThisMonth()) {
@@ -394,9 +440,8 @@ class PlannedPaymentController {
             const now = new Date();
             const currentMonth = now.toISOString().slice(0, 7);
             
-            // Find active payments that need reminders
+            // Find payments that need reminders
             const payments = await PlannedPayment.find({
-                isActive: true,
                 $or: [
                     // First reminder: 3 days before due date
                     {
@@ -465,15 +510,14 @@ class PlannedPaymentController {
             const now = new Date();
             const currentDay = now.getDate();
 
-            // Get active payments for the user
-            const activePayments = await PlannedPayment.find({ 
-                user: userId, 
-                isActive: true 
+            // Get all payments for the user
+            const allPayments = await PlannedPayment.find({ 
+                user: userId 
             });
 
             const notifications = [];
 
-            activePayments.forEach(payment => {
+            allPayments.forEach(payment => {
                 const daysUntilDue = payment.dueDay - currentDay;
                 const status = payment.getStatus();
                 

@@ -51,6 +51,14 @@ class TransactionController {
                 });
             }
 
+            // Validate description length
+            if (description.trim().length > 90) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Description cannot exceed 90 characters"
+                });
+            }
+
             // Validate category based on type
             const validCategories = Transaction.getCategoriesByType(type);
             if (!validCategories.includes(category)) {
@@ -216,6 +224,14 @@ class TransactionController {
                 return res.status(400).json({ 
                     success: false, 
                     message: "Amount must be greater than 0" 
+                });
+            }
+
+            // Validate description length if provided
+            if (description && description.trim().length > 90) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Description cannot exceed 90 characters"
                 });
             }
 

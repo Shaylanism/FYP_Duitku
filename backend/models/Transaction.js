@@ -23,7 +23,8 @@ const transactionSchema = new mongoose.Schema({
     description: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        maxlength: [90, 'Description cannot exceed 90 characters']
     },
     category: {
         type: String,

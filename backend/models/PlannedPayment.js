@@ -10,11 +10,13 @@ const plannedPaymentSchema = new mongoose.Schema({
     title: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        maxlength: [40, 'Title cannot exceed 40 characters']
     },
     description: {
         type: String,
-        trim: true
+        trim: true,
+        maxlength: [30, 'Description cannot exceed 30 characters']
     },
     amount: {
         type: Number,
@@ -113,8 +115,6 @@ plannedPaymentSchema.methods.getNextDueDate = function() {
 
 // Method to check if payment is overdue
 plannedPaymentSchema.methods.isOverdue = function() {
-    if (!this.isActive) return false;
-    
     const now = new Date();
     const currentDueDate = new Date(now.getFullYear(), now.getMonth(), this.dueDay);
     
@@ -128,7 +128,6 @@ plannedPaymentSchema.methods.isOverdue = function() {
 
 // Method to get payment status
 plannedPaymentSchema.methods.getStatus = function() {
-    if (!this.isActive) return 'inactive';
     if (this.isOverdue()) return 'overdue';
     if (!this.isDueThisMonth()) return 'settled';
     return 'pending';

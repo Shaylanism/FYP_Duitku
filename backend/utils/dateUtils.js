@@ -42,4 +42,36 @@ export const isValidDueDayForCurrentMonth = (dueDay) => {
 export const getValidDueDayForMonth = (year, month, requestedDay) => {
     const lastDayOfMonth = getDaysInMonth(year, month);
     return Math.min(requestedDay, lastDayOfMonth);
+};
+
+/**
+ * Check if a due day is in the past for the current month
+ * @param {number} dueDay - The due day to check
+ * @returns {boolean} True if the due day has already passed this month
+ */
+export const isDueDayInPast = (dueDay) => {
+    const now = new Date();
+    const currentDay = now.getDate();
+    return dueDay < currentDay;
+};
+
+/**
+ * Get the next month's due date for a given due day
+ * @param {number} dueDay - The due day
+ * @returns {Date} The next month's due date
+ */
+export const getNextMonthDueDate = (dueDay) => {
+    const now = new Date();
+    let nextMonth = now.getMonth() + 1;
+    let nextYear = now.getFullYear();
+    
+    // Handle year rollover
+    if (nextMonth > 11) {
+        nextMonth = 0;
+        nextYear += 1;
+    }
+    
+    // Get valid due day for next month
+    const validDueDay = getValidDueDayForMonth(nextYear, nextMonth, dueDay);
+    return new Date(nextYear, nextMonth, validDueDay);
 }; 

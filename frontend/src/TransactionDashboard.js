@@ -199,6 +199,12 @@ function TransactionDashboard() {
       return;
     }
 
+    if (form.description.trim().length > 90) {
+      setError('Description cannot exceed 90 characters');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (editing) {
         await axios.put(`${API_URL}/${form.id}`, {
@@ -380,9 +386,18 @@ function TransactionDashboard() {
               placeholder="Enter transaction description"
               value={form.description}
               onChange={handleChange}
+              maxLength={90}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 box-border"
             />
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-xs text-gray-500">
+                Maximum 90 characters
+              </span>
+              <span className={`text-xs ${form.description.length > 75 ? 'text-orange-600' : 'text-gray-500'}`}>
+                {form.description.length}/90
+              </span>
+            </div>
           </div>
           <div className="flex gap-2">
             <button 

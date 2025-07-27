@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import PastDueDateModal from './PastDueDateModal';
 
 const API_URL = '/api/planned-payments';
 const TRANSACTIONS_API = '/api/transactions';
@@ -9,7 +10,6 @@ function PlannedPayments() {
   const [categories, setCategories] = useState({ income: [], expense: [] });
   const [form, setForm] = useState({ 
     title: '',
-    description: '',
     amount: '',
     category: '',
     dueDay: '',
@@ -19,6 +19,8 @@ function PlannedPayments() {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const [settlingPayment, setSettlingPayment] = useState(null);
+  const [showPastDueModal, setShowPastDueModal] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState(null);
 
   // Fetch categories from transactions API
   const fetchCategories = async () => {
@@ -73,6 +75,12 @@ function PlannedPayments() {
       return;
     }
 
+    if (form.title.trim().length > 40) {
+      setError('Title cannot exceed 40 characters');
+      setLoading(false);
+      return;
+    }
+
     if (parseFloat(form.amount) <= 0) {
       setError('Amount must be greater than 0');
       setLoading(false);
@@ -87,25 +95,40 @@ function PlannedPayments() {
       return;
     }
 
-    try {
-      const paymentData = {
-        title: form.title,
-        description: form.description,
-        amount: parseFloat(form.amount),
-        category: form.category,
-        dueDay: dueDay
-      };
+    const paymentData = {
+      title: form.title,
+      amount: parseFloat(form.amount),
+      category: form.category,
+      dueDay: dueDay
+    };
 
+    // Check if due day is in the past and this is a new payment (not editing)
+    if (!editing && isDueDayInPast(dueDay)) {
+      // Show confirmation modal for past due date
+      setPendingPaymentData(paymentData);
+      setShowPastDueModal(true);
+      setLoading(false);
+      return;
+    }
+
+    // Proceed with normal submission
+    await submitPayment(paymentData);
+  };
+
+  // Actual submission logic (extracted to be reusable)
+  const submitPayment = async (paymentData) => {
+    setLoading(true);
+    try {
+      let response;
       if (editing) {
-        await axios.put(`${API_URL}/${form.id}`, paymentData);
+        response = await axios.put(`${API_URL}/${form.id}`, paymentData);
       } else {
-        await axios.post(API_URL, paymentData);
+        response = await axios.post(API_URL, paymentData);
       }
       
       // Reset form
       setForm({ 
         title: '',
-        description: '',
         amount: '',
         category: categories.expense?.[0] || '',
         dueDay: '',
@@ -114,9 +137,33 @@ function PlannedPayments() {
       setEditing(false);
       fetchPlannedPayments();
       setError('');
+
+      // Show success message if payment was auto-settled
+      if (response.data.autoSettled) {
+        alert(`Payment "${paymentData.title}" was created and automatically marked as settled for this month. The next due date is ${new Date(response.data.nextDueDate).toLocaleDateString()}.`);
+        
+        // Dispatch event to refresh notifications in Layout
+        window.dispatchEvent(new CustomEvent('paymentSettled'));
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save planned payment');
     }
+    setLoading(false);
+  };
+
+  // Handle modal confirmation
+  const handleModalConfirm = async () => {
+    setShowPastDueModal(false);
+    if (pendingPaymentData) {
+      await submitPayment(pendingPaymentData);
+      setPendingPaymentData(null);
+    }
+  };
+
+  // Handle modal cancellation
+  const handleModalCancel = () => {
+    setShowPastDueModal(false);
+    setPendingPaymentData(null);
     setLoading(false);
   };
 
@@ -124,7 +171,6 @@ function PlannedPayments() {
   const handleEdit = (payment) => {
     setForm({
       title: payment.title,
-      description: payment.description || '',
       amount: payment.amount.toString(),
       category: payment.category,
       dueDay: payment.dueDay.toString(),
@@ -154,7 +200,7 @@ function PlannedPayments() {
   const handleSettle = async (payment) => {
     const description = prompt(
       `Enter transaction description for settling "${payment.title}":`,
-      `${payment.title} - ${payment.description}`
+      `${payment.title}`
     );
     
     if (description === null) return; // User cancelled
@@ -174,19 +220,6 @@ function PlannedPayments() {
       setError(err.response?.data?.message || 'Failed to settle payment');
     }
     setSettlingPayment(null);
-  };
-
-  // Toggle active status
-  const handleToggleActive = async (payment) => {
-    try {
-      await axios.put(`${API_URL}/${payment._id}`, {
-        isActive: !payment.isActive
-      });
-      fetchPlannedPayments();
-      setError('');
-    } catch (err) {
-      setError('Failed to update payment status');
-    }
   };
 
   const formatCurrency = (amount) => {
@@ -212,8 +245,6 @@ function PlannedPayments() {
         return 'bg-yellow-200 text-yellow-800';
       case 'overdue':
         return 'bg-red-200 text-red-800';
-      case 'inactive':
-        return 'bg-gray-200 text-gray-800';
       default:
         return 'bg-blue-200 text-blue-800';
     }
@@ -239,6 +270,32 @@ function PlannedPayments() {
     return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   };
 
+  // Helper function to check if due day is in the past
+  const isDueDayInPast = (dueDay) => {
+    const now = new Date();
+    const currentDay = now.getDate();
+    return dueDay < currentDay;
+  };
+
+  // Helper function to get next month's due date
+  const getNextMonthDueDate = (dueDay) => {
+    const now = new Date();
+    let nextMonth = now.getMonth() + 1;
+    let nextYear = now.getFullYear();
+    
+    // Handle year rollover
+    if (nextMonth > 11) {
+      nextMonth = 0;
+      nextYear += 1;
+    }
+    
+    // Get valid due day for next month (handle months with fewer days)
+    const lastDayOfNextMonth = new Date(nextYear, nextMonth + 1, 0).getDate();
+    const validDueDay = Math.min(dueDay, lastDayOfNextMonth);
+    
+    return new Date(nextYear, nextMonth, validDueDay);
+  };
+
   // Generate options for due day based on current month
   const dueDayOptions = Array.from({ length: getDaysInCurrentMonth() }, (_, i) => i + 1);
 
@@ -253,7 +310,7 @@ function PlannedPayments() {
         {/* Payment Form */}
         <form onSubmit={handleSubmit} className="mb-6 p-5 bg-gray-50 rounded-lg">
           <h3 className="mt-0 mb-4">{editing ? 'Edit Planned Payment' : 'Add New Planned Payment'}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block mb-1 font-medium">Title *</label>
               <input
@@ -262,9 +319,18 @@ function PlannedPayments() {
                 placeholder="e.g., Electricity Bill"
                 value={form.title}
                 onChange={handleChange}
+                maxLength={40}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
               />
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-xs text-gray-500">
+                  Maximum 40 characters
+                </span>
+                <span className={`text-xs ${form.title.length > 35 ? 'text-orange-600' : 'text-gray-500'}`}>
+                  {form.title.length}/40
+                </span>
+              </div>
             </div>
             <div>
               <label className="block mb-1 font-medium">Amount (RM) *</label>
@@ -297,8 +363,6 @@ function PlannedPayments() {
                 ))}
               </select>
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
             <div>
               <label className="block mb-1 font-medium">Category *</label>
               <select
@@ -315,17 +379,6 @@ function PlannedPayments() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block mb-1 font-medium">Description</label>
-              <input
-                type="text"
-                name="description"
-                placeholder="Additional details (optional)"
-                value={form.description}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-              />
             </div>
           </div>
           <div className="flex gap-2">
@@ -346,7 +399,6 @@ function PlannedPayments() {
                 onClick={() => { 
                   setForm({ 
                     title: '',
-                    description: '',
                     amount: '',
                     category: categories.expense?.[0] || '',
                     dueDay: '',
@@ -402,7 +454,7 @@ function PlannedPayments() {
                         <div className="text-sm">
                           {payment.nextDueDate ? formatDate(payment.nextDueDate) : 'N/A'}
                         </div>
-                        {payment.isActive && daysUntil <= 3 && daysUntil > 0 && (
+                        {daysUntil <= 3 && daysUntil > 0 && (
                           <div className="text-xs text-orange-600 font-medium">
                             {daysUntil} day{daysUntil !== 1 ? 's' : ''} left
                           </div>
@@ -415,7 +467,7 @@ function PlannedPayments() {
                       </td>
                       <td className="py-3 px-2 text-center">
                         <div className="flex gap-1 justify-center flex-wrap">
-                          {payment.isActive && payment.status === 'pending' && (
+                          {payment.status === 'pending' && (
                             <button 
                               onClick={() => handleSettle(payment)}
                               disabled={settlingPayment === payment._id}
@@ -429,16 +481,6 @@ function PlannedPayments() {
                             className="px-2 py-1 bg-yellow-500 text-gray-900 border-none rounded cursor-pointer text-xs hover:bg-yellow-600 transition-colors"
                           >
                             Edit
-                          </button>
-                          <button 
-                            onClick={() => handleToggleActive(payment)}
-                            className={`px-2 py-1 border-none rounded cursor-pointer text-xs transition-colors ${
-                              payment.isActive 
-                                ? 'bg-orange-500 text-white hover:bg-orange-600' 
-                                : 'bg-blue-500 text-white hover:bg-blue-600'
-                            }`}
-                          >
-                            {payment.isActive ? 'Disable' : 'Enable'}
                           </button>
                           <button 
                             onClick={() => handleDelete(payment._id)} 
@@ -463,6 +505,16 @@ function PlannedPayments() {
           </div>
         )}
       </div>
+
+      {/* Past Due Date Confirmation Modal */}
+      <PastDueDateModal
+        isOpen={showPastDueModal}
+        onClose={handleModalCancel}
+        onConfirm={handleModalConfirm}
+        paymentTitle={pendingPaymentData?.title || ''}
+        dueDay={pendingPaymentData?.dueDay || 0}
+        nextDueDate={pendingPaymentData ? getNextMonthDueDate(pendingPaymentData.dueDay) : null}
+      />
     </div>
   );
 }
