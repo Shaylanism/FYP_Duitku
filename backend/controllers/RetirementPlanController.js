@@ -13,6 +13,8 @@ class RetirementPlanController {
                 epfBalance,
                 prsBalance,
                 monthlyContributionPrs,
+                monthlyEpfContributionRate,
+                targetMonthlyIncomeInput,
                 preRetirementReturn = 4.0,
                 postRetirementReturn = 4.0,
                 inflationRate = 3.0
@@ -49,6 +51,14 @@ class RetirementPlanController {
                 });
             }
 
+            // Validate EPF contribution rate
+            if (monthlyEpfContributionRate !== undefined && (monthlyEpfContributionRate < 0 || monthlyEpfContributionRate > 30)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "EPF contribution rate must be between 0% and 30%"
+                });
+            }
+
             // Perform calculations
             const calculations = this.performRetirementCalculations({
                 currentAge,
@@ -58,6 +68,8 @@ class RetirementPlanController {
                 epfBalance: epfBalance || 0,
                 prsBalance: prsBalance || 0,
                 monthlyContributionPrs: monthlyContributionPrs || 0,
+                monthlyEpfContributionRate: monthlyEpfContributionRate || 23,
+                targetMonthlyIncomeInput: targetMonthlyIncomeInput || null,
                 preRetirementReturn,
                 postRetirementReturn,
                 inflationRate
@@ -73,6 +85,8 @@ class RetirementPlanController {
                 epfBalance: epfBalance || 0,
                 prsBalance: prsBalance || 0,
                 monthlyContributionPrs: monthlyContributionPrs || 0,
+                monthlyEpfContributionRate: monthlyEpfContributionRate || 23,
+                targetMonthlyIncomeInput: targetMonthlyIncomeInput || null,
                 preRetirementReturn,
                 postRetirementReturn,
                 inflationRate,
@@ -106,6 +120,8 @@ class RetirementPlanController {
         epfBalance,
         prsBalance,
         monthlyContributionPrs,
+        monthlyEpfContributionRate,
+        targetMonthlyIncomeInput,
         preRetirementReturn,
         postRetirementReturn,
         inflationRate
@@ -117,8 +133,10 @@ class RetirementPlanController {
         const salaryGrowthRate = 3.0;
         const lastDrawnSalary = currentSalary * Math.pow(1 + salaryGrowthRate / 100, yearsToRetirement);
         
-        // Target monthly income: 2/3 of last drawn salary
-        const targetMonthlyIncome = (lastDrawnSalary * 2) / 3;
+        // Target monthly income: use user input if provided, otherwise 2/3 of last drawn salary
+        const targetMonthlyIncome = targetMonthlyIncomeInput && targetMonthlyIncomeInput > 0 
+            ? targetMonthlyIncomeInput 
+            : (lastDrawnSalary * 2) / 3;
         
         // Adjust target income for inflation during retirement
         const inflationAdjustedTargetIncome = targetMonthlyIncome;
@@ -140,7 +158,23 @@ class RetirementPlanController {
 
         // Project EPF balance at retirement (4% average dividend)
         const epfGrowthRate = 4.0 / 100;
-        const projectedEpfBalance = epfBalance * Math.pow(1 + epfGrowthRate, yearsToRetirement);
+        const currentEpfValue = epfBalance * Math.pow(1 + epfGrowthRate, yearsToRetirement);
+        
+        // Calculate monthly EPF contribution amount from salary and rate
+        const monthlyEpfContribution = (currentSalary * (monthlyEpfContributionRate / 100)) / 12;
+        
+        // Future value of monthly EPF contributions
+        let futureEpfContributions = 0;
+        if (monthlyEpfContribution > 0 && epfGrowthRate > 0) {
+            const monthlyGrowthRate = epfGrowthRate / 12;
+            const totalMonthsToRetirement = yearsToRetirement * 12;
+            const fvAnnuityFactor = (Math.pow(1 + monthlyGrowthRate, totalMonthsToRetirement) - 1) / monthlyGrowthRate;
+            futureEpfContributions = monthlyEpfContribution * fvAnnuityFactor;
+        } else if (monthlyEpfContribution > 0) {
+            futureEpfContributions = monthlyEpfContribution * yearsToRetirement * 12;
+        }
+        
+        const projectedEpfBalance = currentEpfValue + futureEpfContributions;
 
         // Project PRS balance at retirement
         const prsGrowthRate = preRetirementReturn / 100;
@@ -184,6 +218,7 @@ class RetirementPlanController {
             yearsInRetirement,
             lastDrawnSalary: Math.round(lastDrawnSalary * 100) / 100,
             targetMonthlyIncome: Math.round(targetMonthlyIncome * 100) / 100,
+            monthlyEpfContribution: Math.round(monthlyEpfContribution * 100) / 100,
             totalFundsNeeded: Math.round(totalFundsNeeded * 100) / 100,
             projectedEpfBalance: Math.round(projectedEpfBalance * 100) / 100,
             projectedPrsBalance: Math.round(projectedPrsBalance * 100) / 100,

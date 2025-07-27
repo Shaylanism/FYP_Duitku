@@ -12,6 +12,8 @@ function RetirementPlanner() {
     epfBalance: '',
     prsBalance: '',
     monthlyContributionPrs: '',
+    monthlyEpfContributionRate: 23,
+    targetMonthlyIncomeInput: '',
     preRetirementReturn: 4.0,
     postRetirementReturn: 4.0,
     inflationRate: 3.0
@@ -60,6 +62,8 @@ function RetirementPlanner() {
         epfBalance: parseFloat(form.epfBalance) || 0,
         prsBalance: parseFloat(form.prsBalance) || 0,
         monthlyContributionPrs: parseFloat(form.monthlyContributionPrs) || 0,
+        monthlyEpfContributionRate: parseFloat(form.monthlyEpfContributionRate) || 23,
+        targetMonthlyIncomeInput: form.targetMonthlyIncomeInput ? parseFloat(form.targetMonthlyIncomeInput) : null,
         preRetirementReturn: parseFloat(form.preRetirementReturn),
         postRetirementReturn: parseFloat(form.postRetirementReturn),
         inflationRate: parseFloat(form.inflationRate)
@@ -198,6 +202,25 @@ function RetirementPlanner() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Monthly EPF Contribution Rate (%)
+                </label>
+                <input
+                  type="number"
+                  name="monthlyEpfContributionRate"
+                  value={form.monthlyEpfContributionRate}
+                  onChange={handleChange}
+                  min="0"
+                  max="30"
+                  step="0.1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Standard rate: 23% (11% employee + 12% employer). Maximum: 30%
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -230,6 +253,26 @@ function RetirementPlanner() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+            </div>
+
+            {/* Target Monthly Income */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Target Monthly Retirement Income (RM)
+              </label>
+              <input
+                type="number"
+                name="targetMonthlyIncomeInput"
+                value={form.targetMonthlyIncomeInput}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                placeholder="Leave empty to use default (2/3 of final salary)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Optional: Specify your desired monthly income during retirement. If left empty, we'll calculate 2/3 of your projected final salary.
+              </p>
             </div>
 
             {/* Advanced Settings */}
@@ -308,31 +351,40 @@ function RetirementPlanner() {
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Retirement Plan Results</h2>
               
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-medium text-blue-900">Years to Retirement</h3>
-                    <p className="text-2xl font-bold text-blue-700">{result.yearsToRetirement} years</p>
-                  </div>
-                  
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h3 className="font-medium text-green-900">Last Drawn Salary</h3>
-                    <p className="text-2xl font-bold text-green-700">{formatCurrency(result.lastDrawnSalary)}</p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-medium text-blue-900">Last Drawn Salary</h3>
+                  <p className="text-2xl font-bold text-blue-700">{formatCurrency(result.lastDrawnSalary)}</p>
+                  <p className="text-sm text-blue-600">At retirement age</p>
                 </div>
-
+                
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <h3 className="font-medium text-purple-900">Target Monthly Retirement Income</h3>
                   <p className="text-2xl font-bold text-purple-700">{formatCurrency(result.targetMonthlyIncome)}</p>
-                  <p className="text-sm text-purple-600">2/3 of your last drawn salary</p>
+                  <p className="text-sm text-purple-600">
+                    {form.targetMonthlyIncomeInput && parseFloat(form.targetMonthlyIncomeInput) > 0 
+                      ? 'Based on your specified target' 
+                      : '2/3 of your last drawn salary'
+                    }
+                  </p>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h3 className="font-medium text-green-900">Monthly EPF Contribution</h3>
+                  <p className="text-2xl font-bold text-green-700">{formatCurrency(result.monthlyEpfContribution)}</p>
+                  <p className="text-sm text-green-600">{form.monthlyEpfContributionRate}% of current salary</p>
+                </div>
+                
                 <div className="bg-orange-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-orange-900">Total Funds Needed at Retirement</h3>
+                  <h3 className="font-medium text-orange-900">Total Funds Needed</h3>
                   <p className="text-2xl font-bold text-orange-700">{formatCurrency(result.totalFundsNeeded)}</p>
+                  <p className="text-sm text-orange-600">At retirement</p>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="font-medium text-gray-900">Projected EPF Balance</h3>
                     <p className="text-xl font-bold text-gray-700">{formatCurrency(result.projectedEpfBalance)}</p>
@@ -344,26 +396,27 @@ function RetirementPlanner() {
                   </div>
                 </div>
 
-                <div className="bg-indigo-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-indigo-900">Total Projected Savings</h3>
-                  <p className="text-2xl font-bold text-indigo-700">{formatCurrency(result.totalProjectedSavings)}</p>
-                </div>
+                <div className="space-y-4">
+                  <div className="bg-indigo-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-indigo-900">Total Projected Savings</h3>
+                    <p className="text-2xl font-bold text-indigo-700">{formatCurrency(result.totalProjectedSavings)}</p>
+                  </div>
 
-                {result.fundingGap > 0 ? (
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <h3 className="font-medium text-red-900">Funding Gap</h3>
-                    <p className="text-2xl font-bold text-red-700">{formatCurrency(result.fundingGap)}</p>
-                    <p className="text-sm text-red-600 mt-2">
-                      You need an additional <strong>{formatCurrency(result.additionalMonthlySavingsRequired)}</strong> per month to meet your retirement goals.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <h3 className="font-medium text-green-900">Congratulations!</h3>
-                    <p className="text-green-700">You're on track to meet your retirement goals!</p>
-                  </div>
-                )}
-              </div>
+                  {result.fundingGap > 0 ? (
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                      <h3 className="font-medium text-red-900">Funding Gap</h3>
+                      <p className="text-2xl font-bold text-red-700">{formatCurrency(result.fundingGap)}</p>
+                      <p className="text-sm text-red-600 mt-2">
+                        You need an additional <strong>{formatCurrency(result.additionalMonthlySavingsRequired)}</strong> per month to meet your retirement goals.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <h3 className="font-medium text-green-900">Congratulations!</h3>
+                      <p className="text-green-700">You're on track to meet your retirement goals!</p>
+                    </div>
+                  )}
+                </div>
             </div>
           )}
 
@@ -389,10 +442,13 @@ function RetirementPlanner() {
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium">
-                            Age {plan.currentAge} → {plan.retirementAge} (retire in {plan.yearsToRetirement} years)
+                            Age {plan.currentAge} to {plan.retirementAge} (retire in {plan.yearsToRetirement} years)
                           </p>
                           <p className="text-sm text-gray-600">
                             Target: {formatCurrency(plan.targetMonthlyIncome)}/month
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            EPF Rate: {plan.monthlyEpfContributionRate || 23}% | Monthly EPF: {formatCurrency(plan.monthlyEpfContribution || 0)}
                           </p>
                           <p className="text-sm text-gray-600">
                             {new Date(plan.calculationDate).toLocaleDateString()}
