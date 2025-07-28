@@ -8,6 +8,7 @@ import TransactionDashboard from './TransactionDashboard';
 import BudgetPlanner from './components/BudgetPlanner';
 import PlannedPayments from './components/PlannedPayments';
 import RetirementPlanner from './components/RetirementPlanner';
+import FinancialReportExport from './components/FinancialReportExport';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -77,6 +78,7 @@ function AppContent() {
           <Route path="budget-planner" element={<BudgetPlanner />} />
           <Route path="planned-payments" element={<PlannedPayments />} />
           <Route path="retirement-planner" element={<RetirementPlanner />} />
+          <Route path="export-report" element={<FinancialReportExport />} />
           <Route index element={<Navigate to="transactions" replace />} />
         </Route>
         
