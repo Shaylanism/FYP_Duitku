@@ -40,7 +40,7 @@ const BudgetWarningModal = ({
         
         <div className="mb-6">
           <p className="text-gray-600 mb-4">
-            You already have <strong>{transactionCount}</strong> transaction{transactionCount > 1 ? 's' : ''} 
+            You already have <strong>{transactionCount}</strong> transaction {transactionCount > 1 ? 's' : ''} 
             in the <strong>{category}</strong> category for <strong>{formatMonthDisplay(month)}</strong>.
           </p>
           

@@ -16,7 +16,7 @@ const retirementPlanSchema = new mongoose.Schema({
     retirementAge: {
         type: Number,
         required: true,
-        min: 50,
+        min: 40,
         max: 100
     },
     lifeExpectancy: {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from './contexts/AuthContext';
 import { getCurrentMonth, isCurrentMonth } from './utils/monthUtils';
@@ -6,39 +6,160 @@ import MonthFilter from './components/MonthFilter';
 
 const API_URL = '/api/transactions';
 
-// Custom Category Select Component that shows only 3 options before scrolling
+// Enhanced Category Select Component with keyboard navigation and shows 5 options before scrolling
 const CategorySelect = ({ name, value, onChange, options, required, className }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState(null);
+  const dropdownRef = useRef(null);
+  const containerRef = useRef(null);
 
   const handleSelect = (category) => {
     onChange({ target: { name, value: category } });
     setIsOpen(false);
+    setFocusedIndex(-1);
+    setSearchTerm('');
+  };
+
+  const scrollToOption = (index) => {
+    if (dropdownRef.current && index >= 0) {
+      const optionElement = dropdownRef.current.children[index];
+      if (optionElement) {
+        optionElement.scrollIntoView({
+          block: 'nearest',
+          behavior: 'smooth'
+        });
+      }
+    }
+  };
+
+  const findOptionByChar = (char, startIndex = 0) => {
+    const searchChar = char.toLowerCase();
+    for (let i = 0; i < options.length; i++) {
+      const index = (startIndex + i) % options.length;
+      if (options[index].toLowerCase().startsWith(searchChar)) {
+        return index;
+      }
+    }
+    return -1;
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      setIsOpen(false);
+    if (!isOpen) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setIsOpen(true);
+        setFocusedIndex(0);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault();
+        setIsOpen(false);
+        setFocusedIndex(-1);
+        setSearchTerm('');
+        break;
+      
+      case 'ArrowDown':
+        e.preventDefault();
+        const nextIndex = focusedIndex < options.length - 1 ? focusedIndex + 1 : 0;
+        setFocusedIndex(nextIndex);
+        scrollToOption(nextIndex);
+        break;
+      
+      case 'ArrowUp':
+        e.preventDefault();
+        const prevIndex = focusedIndex > 0 ? focusedIndex - 1 : options.length - 1;
+        setFocusedIndex(prevIndex);
+        scrollToOption(prevIndex);
+        break;
+      
+      case 'Enter':
+        e.preventDefault();
+        if (focusedIndex >= 0 && focusedIndex < options.length) {
+          handleSelect(options[focusedIndex]);
+        }
+        break;
+      
+      default:
+        // Handle letter/number key presses for quick navigation
+        if (e.key.length === 1 && e.key.match(/[a-zA-Z0-9]/)) {
+          e.preventDefault();
+          
+          // Clear existing timeout
+          if (searchTimeout) {
+            clearTimeout(searchTimeout);
+          }
+          
+          const newSearchTerm = searchTerm + e.key.toLowerCase();
+          setSearchTerm(newSearchTerm);
+          
+          // Find option that starts with the search term
+          let foundIndex = -1;
+          for (let i = 0; i < options.length; i++) {
+            if (options[i].toLowerCase().startsWith(newSearchTerm)) {
+              foundIndex = i;
+              break;
+            }
+          }
+          
+          // If not found with combined search term, try just the current character
+          if (foundIndex === -1) {
+            foundIndex = findOptionByChar(e.key, focusedIndex + 1);
+          }
+          
+          if (foundIndex !== -1) {
+            setFocusedIndex(foundIndex);
+            scrollToOption(foundIndex);
+          }
+          
+          // Clear search term after a delay
+          const timeout = setTimeout(() => {
+            setSearchTerm('');
+          }, 800);
+          setSearchTimeout(timeout);
+        }
+        break;
     }
   };
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!event.target.closest('.category-dropdown')) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
+        setFocusedIndex(-1);
+        setSearchTerm('');
       }
     };
+    
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
+  // Reset focused index when options change
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [options]);
 
   return (
-    <div className="relative category-dropdown">
+    <div ref={containerRef} className="relative category-dropdown">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
         className={`${className} bg-white cursor-pointer flex items-center justify-between`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label="Select category"
       >
         <span className={value ? 'text-gray-900' : 'text-gray-500'}>
           {value || 'Select category...'}
@@ -55,18 +176,28 @@ const CategorySelect = ({ name, value, onChange, options, required, className })
       
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
-          <div className="max-h-32 overflow-y-auto"> {/* Shows ~4 options before scroll */}
+          <div 
+            ref={dropdownRef}
+            className="max-h-40 overflow-y-auto" // Increased height to show 5 options
+            role="listbox"
+            aria-label="Category options"
+          >
             {options.length === 0 ? (
               <div className="px-3 py-2 text-gray-500">Loading categories...</div>
             ) : (
-              options.map((category) => (
+              options.map((category, index) => (
                 <button
                   key={category}
                   type="button"
                   onClick={() => handleSelect(category)}
-                  className={`w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none ${
+                  onMouseEnter={() => setFocusedIndex(index)}
+                  className={`w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none transition-colors ${
                     value === category ? 'bg-blue-50 text-blue-700' : 'text-gray-900'
+                  } ${
+                    focusedIndex === index ? 'bg-gray-100' : ''
                   }`}
+                  role="option"
+                  aria-selected={value === category}
                 >
                   {category}
                 </button>
@@ -320,7 +451,7 @@ function TransactionDashboard() {
           </p>
         </div>
         <div className={`p-4 rounded-lg text-center ${summary.balance >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-          <h3 className={`mb-2 mt-0 ${summary.balance >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>Balance</h3>
+          <h3 className={`mb-2 mt-0 ${summary.balance >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>Monthly Balance</h3>
           <p className={`m-0 text-2xl font-bold ${summary.balance >= 0 ? 'text-blue-900' : 'text-orange-900'}`}>
             {formatCurrency(summary.balance)}
           </p>
