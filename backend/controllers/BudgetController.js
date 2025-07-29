@@ -135,6 +135,94 @@ class BudgetController {
         }
     }
 
+    // Get user's budgets with spending calculations for reports
+    async getBudgetsWithSpending(req, res) {
+        try {
+            const userId = req.user._id;
+            const { month, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+
+            // Build query
+            const query = { user: userId };
+            if (month) {
+                query.month = month;
+            }
+
+            // Calculate pagination
+            const skip = (parseInt(page) - 1) * parseInt(limit);
+            const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+
+            // Get budgets with pagination
+            const budgets = await Budget.find(query)
+                .sort(sort)
+                .skip(skip)
+                .limit(parseInt(limit))
+                .populate('user', 'name email');
+
+            // Calculate spending for each budget
+            const budgetsWithSpending = await Promise.all(
+                budgets.map(async (budget) => {
+                    // Create date range for the budget month
+                    const startDate = new Date(`${budget.month}-01T00:00:00.000Z`);
+                    const endDate = new Date(startDate);
+                    endDate.setMonth(endDate.getMonth() + 1);
+
+                    // Get expense transactions for this category and month
+                    const transactions = await Transaction.find({
+                        user: userId,
+                        category: budget.category,
+                        type: 'expense',
+                        createdAt: {
+                            $gte: startDate,
+                            $lt: endDate
+                        }
+                    });
+
+                    // Calculate total spent
+                    const totalSpent = transactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+                    const remainingBalance = budget.budgetAmount - totalSpent;
+
+                    return {
+                        ...budget.toObject(),
+                        spent: totalSpent,
+                        remainingBalance: remainingBalance,
+                        transactionCount: transactions.length
+                    };
+                })
+            );
+
+            // Get total count for pagination
+            const total = await Budget.countDocuments(query);
+
+            // Calculate summary with spending information
+            const totalBudgetAmount = budgetsWithSpending.reduce((sum, budget) => sum + budget.budgetAmount, 0);
+            const totalSpent = budgetsWithSpending.reduce((sum, budget) => sum + budget.spent, 0);
+            const totalRemaining = budgetsWithSpending.reduce((sum, budget) => sum + budget.remainingBalance, 0);
+
+            res.status(200).json({ 
+                success: true, 
+                budgets: budgetsWithSpending,
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: Math.ceil(total / parseInt(limit)),
+                    totalBudgets: total,
+                    hasNextPage: skip + parseInt(limit) < total,
+                    hasPrevPage: parseInt(page) > 1
+                },
+                summary: {
+                    totalBudgetAmount: totalBudgetAmount,
+                    totalSpent: totalSpent,
+                    totalRemaining: totalRemaining
+                }
+            });
+        } catch (error) {
+            console.error("Error fetching budgets with spending:", error.message);
+            res.status(500).json({ 
+                success: false, 
+                message: "Failed to fetch budgets with spending calculations"
+            });
+        }
+    }
+
     // Update budget
     async updateBudget(req, res) {
         try {

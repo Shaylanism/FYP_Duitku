@@ -11,6 +11,7 @@ const Layout = () => {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [hasWarnings, setHasWarnings] = useState(false);
   const [notificationCheckDone, setNotificationCheckDone] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -109,8 +110,9 @@ const Layout = () => {
     {
       path: '/dashboard/transactions',
       name: 'Transactions',
+      description: 'View and manage transactions',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       )
@@ -118,8 +120,9 @@ const Layout = () => {
     {
       path: '/dashboard/budget-planner',
       name: 'Budget Planner',
+      description: 'Plan and track budgets',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       )
@@ -127,9 +130,10 @@ const Layout = () => {
     {
       path: '/dashboard/planned-payments',
       name: 'Planned Payments',
+      description: 'Schedule recurring payments',
       hasWarning: hasWarnings,
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
@@ -137,85 +141,191 @@ const Layout = () => {
     {
       path: '/dashboard/retirement-planner',
       name: 'Retirement Planner',
+      description: 'Plan for your future',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m-3-6h6m-3 0h.01M9 16h6" />
         </svg>
       )
     },
     {
       path: '/dashboard/export-report',
-      name: 'Export Financial Report',
+      name: 'Export Report',
+      description: 'Generate financial reports',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h2z" />
         </svg>
       )
     }
   ];
 
+  const getPageTitle = () => {
+    const currentItem = navigationItems.find(item => item.path === location.pathname);
+    return currentItem ? currentItem.name : 'Dashboard';
+  };
+
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-neutral-25">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
-        <div className="flex flex-col h-full">
-          {/* Logo/Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-800">Duitku</h1>
-            <p className="text-sm text-gray-600">Welcome, {user?.name}</p>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6">
-            <ul className="space-y-2">
-              {navigationItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 relative ${
-                        isActive
-                          ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <span className="mr-3">{item.icon}</span>
-                      {item.name}
-                      {item.hasWarning && (
-                        <span className="ml-auto">
-                          <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-
-          {/* Logout Button */}
-          <div className="px-4 py-4 border-t border-gray-200">
-            <button 
-              onClick={handleLogout}
-              className="w-full flex items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+      <div className={`${sidebarCollapsed ? 'w-20' : 'w-72'} bg-white shadow-strong border-r border-neutral-200 flex flex-col transition-all duration-300`}>
+        {/* Header Section */}
+        <div className="p-6 border-b border-neutral-100">
+          <div className="flex items-center justify-between">
+            {!sidebarCollapsed && (
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-glow">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m-3-6h6m-3 0h.01M9 16h6" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gradient-gold">Duitku</h1>
+                  <p className="text-xs text-neutral-500">Financial Management</p>
+                </div>
+              </div>
+            )}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 rounded-lg hover:bg-neutral-100 transition-colors duration-200"
             >
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <svg className="w-5 h-5 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              Logout
             </button>
           </div>
         </div>
+
+        {/* User Info */}
+        {!sidebarCollapsed && (
+          <div className="p-6 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200">
+            <div className="flex items-center space-x-3">
+              <div className="h-12 w-12 bg-gradient-to-r from-primary-400 to-primary-500 rounded-xl flex items-center justify-center">
+                <span className="text-white font-semibold text-lg">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-neutral-900 truncate">
+                  Welcome back,
+                </p>
+                <p className="text-lg font-bold text-primary-700 truncate">
+                  {user?.name}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {navigationItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`${isActive ? 'nav-item-active' : 'nav-item'} group relative`}
+                title={sidebarCollapsed ? item.name : ''}
+              >
+                <div className="flex items-center">
+                  {item.icon}
+                  {!sidebarCollapsed && (
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{item.name}</span>
+                        {item.hasWarning && (
+                          <div className="flex items-center">
+                            <span className="w-2 h-2 bg-warning-500 rounded-full animate-pulse"></span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs opacity-75 mt-0.5">{item.description}</p>
+                    </div>
+                  )}
+                  {sidebarCollapsed && item.hasWarning && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-warning-500 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Logout Section */}
+        <div className="p-4 border-t border-neutral-200">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center px-4 py-3 text-error-600 hover:bg-error-50 rounded-xl transition-all duration-200 group"
+            title={sidebarCollapsed ? 'Logout' : ''}
+          >
+            <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            {!sidebarCollapsed && (
+              <span className="font-medium">Logout</span>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          <Outlet />
-        </div>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header */}
+        <header className="bg-white border-b border-neutral-200 shadow-soft">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold text-neutral-900">{getPageTitle()}</h2>
+                <p className="text-sm text-neutral-600 mt-1">
+                  {new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </p>
+              </div>
+              
+              {/* Header Actions */}
+              <div className="flex items-center space-x-4">
+                {/* Notifications */}
+                {hasWarnings && (
+                  <button
+                    onClick={() => setShowNotificationModal(true)}
+                    className="relative p-2 rounded-xl bg-warning-50 text-warning-600 hover:bg-warning-100 transition-colors duration-200"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-warning-500 rounded-full animate-pulse"></span>
+                  </button>
+                )}
+                
+                {/* User Menu */}
+                <div className="flex items-center space-x-3 pl-4 border-l border-neutral-200">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-neutral-900">{user?.name}</p>
+                    <p className="text-xs text-neutral-500">{user?.email}</p>
+                  </div>
+                  <div className="h-10 w-10 bg-gradient-to-r from-primary-400 to-primary-500 rounded-xl flex items-center justify-center">
+                    <span className="text-white font-semibold">
+                      {user?.name?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto bg-neutral-25">
+          <div className="p-6">
+            <Outlet />
+          </div>
+        </main>
       </div>
 
       {/* Payment Notification Modal */}

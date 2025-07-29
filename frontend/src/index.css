@@ -1,17 +1,257 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  * {
+    @apply border-neutral-200;
+  }
+  
+  body {
+    @apply bg-neutral-25 text-neutral-800 font-sans antialiased;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif text-neutral-900;
+  }
+
+  h1 {
+    @apply text-4xl font-bold leading-tight;
+  }
+
+  h2 {
+    @apply text-3xl font-semibold leading-tight;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold leading-snug;
+  }
+
+  h4 {
+    @apply text-xl font-medium leading-snug;
+  }
+
+  h5 {
+    @apply text-lg font-medium leading-normal;
+  }
+
+  h6 {
+    @apply text-base font-medium leading-normal;
+  }
+
+  code {
+    @apply font-mono bg-neutral-100 px-1 py-0.5 rounded text-sm;
+  }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-neutral-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-400;
+  }
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+@layer components {
+  /* Banking Card Components */
+  .banking-card {
+    @apply bg-white rounded-2xl shadow-soft border border-neutral-100 overflow-hidden;
+  }
+
+  .banking-card-elevated {
+    @apply bg-white rounded-2xl shadow-medium border border-neutral-100 overflow-hidden;
+  }
+
+  .banking-card-premium {
+    @apply bg-gradient-to-br from-white to-primary-50 rounded-2xl shadow-strong border border-primary-200 overflow-hidden;
+  }
+
+  /* Form Components */
+  .banking-input {
+    @apply w-full px-4 py-3 bg-white border border-neutral-200 rounded-xl text-neutral-900 placeholder-neutral-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent hover:border-neutral-300;
+  }
+
+  .banking-input-error {
+    @apply banking-input border-error-300 focus:ring-error-500;
+  }
+
+  .banking-select {
+    @apply banking-input appearance-none bg-white bg-no-repeat bg-right pr-10;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-size: 1.5em 1.5em;
+  }
+
+  .banking-label {
+    @apply block text-sm font-medium text-neutral-700 mb-2;
+  }
+
+  /* Button Components */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-primary-600 shadow-soft hover:bg-primary-700 hover:shadow-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-neutral-300 text-base font-medium rounded-xl text-neutral-700 bg-white shadow-soft hover:bg-neutral-50 hover:shadow-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-neutral-600 bg-transparent hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-error-600 shadow-soft hover:bg-error-700 hover:shadow-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-error-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-success {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-success-600 shadow-soft hover:bg-success-700 hover:shadow-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Navigation Components */
+  .nav-item {
+    @apply flex items-center px-4 py-3 text-neutral-600 rounded-xl transition-all duration-200 hover:bg-primary-50 hover:text-primary-700;
+  }
+
+  .nav-item-active {
+    @apply nav-item bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-glow hover:from-primary-600 hover:to-primary-700 hover:text-white;
+  }
+
+  .nav-icon {
+    @apply w-5 h-5 mr-3 transition-colors duration-200;
+  }
+
+  /* Status Indicators */
+  .status-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .status-badge-success {
+    @apply status-badge bg-success-100 text-success-700;
+  }
+
+  .status-badge-warning {
+    @apply status-badge bg-warning-100 text-warning-700;
+  }
+
+  .status-badge-error {
+    @apply status-badge bg-error-100 text-error-700;
+  }
+
+  .status-badge-info {
+    @apply status-badge bg-primary-100 text-primary-700;
+  }
+
+  .status-badge-neutral {
+    @apply status-badge bg-neutral-100 text-neutral-700;
+  }
+
+  /* Table Components */
+  .banking-table {
+    @apply w-full bg-white rounded-xl overflow-hidden shadow-soft;
+  }
+
+  .banking-table th {
+    @apply px-6 py-4 text-left text-sm font-semibold text-neutral-900 bg-neutral-50 border-b border-neutral-200;
+  }
+
+  .banking-table td {
+    @apply px-6 py-4 text-sm text-neutral-700 border-b border-neutral-100;
+  }
+
+  .banking-table tr:hover {
+    @apply bg-neutral-25;
+  }
+
+  /* Modal Components */
+  .modal-overlay {
+    @apply fixed inset-0 bg-neutral-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-2xl shadow-strong max-w-lg w-full max-h-[90vh] overflow-y-auto;
+  }
+
+  /* Alert Components */
+  .alert {
+    @apply p-4 rounded-xl border;
+  }
+
+  .alert-success {
+    @apply alert bg-success-50 border-success-200 text-success-800;
+  }
+
+  .alert-warning {
+    @apply alert bg-warning-50 border-warning-200 text-warning-800;
+  }
+
+  .alert-error {
+    @apply alert bg-error-50 border-error-200 text-error-800;
+  }
+
+  .alert-info {
+    @apply alert bg-primary-50 border-primary-200 text-primary-800;
+  }
+
+  /* Loading Components */
+  .loading-spinner {
+    @apply inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin;
+  }
+
+  /* Utilities */
+  .glass-effect {
+    @apply backdrop-blur-md bg-white bg-opacity-80 border border-white border-opacity-20;
+  }
+
+  .gradient-gold {
+    @apply bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600;
+  }
+
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .banking-shadow-hover {
+    transition: box-shadow 0.2s ease-in-out;
+  }
+
+  .banking-shadow-hover:hover {
+    box-shadow: 0 8px 40px -12px rgba(0, 0, 0, 0.15);
+  }
+
+  .banking-focus {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
 }

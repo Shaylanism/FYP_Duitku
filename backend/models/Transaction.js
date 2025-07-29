@@ -31,7 +31,7 @@ const transactionSchema = new mongoose.Schema({
         required: true,
         validate: {
             validator: function(value) {
-                // Allow existing invalid categories to remain (backward compatibility)
+                // Allow existing invalid categories to remain, just in case remove/add categories
                 // But validate new transactions against predefined categories
                 if (this.isNew) {
                     if (this.type === 'income') {

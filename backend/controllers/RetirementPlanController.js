@@ -107,7 +107,7 @@ class RetirementPlanController {
                 salaryIncrementRate
             });
 
-            // Check if user already has a retirement plan
+            // Checks if the user already has a retirement plan
             const existingPlan = await RetirementPlan.findOne({ user: userId });
 
             const planData = {
@@ -133,14 +133,14 @@ class RetirementPlanController {
 
             let savedPlan;
             if (existingPlan) {
-                // Update existing plan
+                // Update existing retirementplan
                 savedPlan = await RetirementPlan.findOneAndUpdate(
                     { user: userId },
                     planData,
                     { new: true, runValidators: true }
                 );
             } else {
-                // Create new plan
+                // Create new retirementplan
                 const newRetirementPlan = new RetirementPlan(planData);
                 savedPlan = await newRetirementPlan.save();
             }
@@ -161,7 +161,7 @@ class RetirementPlanController {
         }
     }
 
-    // Perform the actual retirement calculations
+    // Performs the actual retirement calculations
     performRetirementCalculations({
         currentAge,
         retirementAge,
@@ -182,7 +182,7 @@ class RetirementPlanController {
         const yearsToRetirement = retirementAge - currentAge;
         const yearsInRetirement = lifeExpectancy - retirementAge;
         
-        // Calculate last drawn salary with optional increments
+        // Calculates last drawn salary with the option of salary increments
         let lastDrawnSalary;
         if (enableSalaryIncrements) {
             lastDrawnSalary = currentSalary * Math.pow(1 + salaryIncrementRate / 100, yearsToRetirement);
@@ -190,14 +190,13 @@ class RetirementPlanController {
             lastDrawnSalary = currentSalary; // No increments, salary stays the same
         }
         
-        // Target monthly income: use user input if provided, otherwise 2/3 of last drawn salary
+        // Target monthly income: use user input if provided, otherwise 2/3 of last drawn salary will be the default
         const targetMonthlyIncome = targetMonthlyIncomeInput && targetMonthlyIncomeInput > 0 
             ? targetMonthlyIncomeInput 
             : (lastDrawnSalary * 2) / 3;
         
         // Calculate total funds needed (present value at retirement)
         // This accounts for inflation during retirement to maintain purchasing power
-        // Example: RM5,000/month target means you need RM5,150 in year 2, RM5,305 in year 3, etc. (at 3% inflation)
         const monthlyReturnRate = postRetirementReturn / 100 / 12;
         const monthlyInflationRate = inflationRate / 100 / 12;
         const totalMonthsInRetirement = yearsInRetirement * 12;
@@ -232,11 +231,11 @@ class RetirementPlanController {
         const currentEpfValue = epfBalance * Math.pow(1 + epfGrowthRate, yearsToRetirement);
         
         // Calculate monthly EPF contribution amount from salary and rate
-        // Note: currentSalary is already monthly, so no division by 12 needed
+        // Since currentSalary is already monthly, no division by 12 is needed
         const initialMonthlyEpfContribution = currentSalary * (monthlyEpfContributionRate / 100);
         
         // Future value of EPF contributions at retirement
-        // Two scenarios:
+        // Two scenarios to add:
         // 1. Salary increments enabled: Contributions grow annually with salary (growing annuity)
         // 2. Salary increments disabled: Contributions remain constant (regular annuity)
         let futureEpfContributions = 0;
