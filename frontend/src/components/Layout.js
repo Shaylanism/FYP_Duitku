@@ -12,28 +12,42 @@ const Layout = () => {
   const [hasWarnings, setHasWarnings] = useState(false);
   const [notificationCheckDone, setNotificationCheckDone] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [lastNotificationIds, setLastNotificationIds] = useState(new Set());
 
   const handleLogout = () => {
     logout();
   };
 
   // Fetch payment notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (showModalOnNewNotifications = false) => {
     try {
       const res = await axios.get('/api/planned-payments/notifications');
       if (res.data.success) {
         setNotifications(res.data.notifications);
         setHasWarnings(res.data.hasWarnings);
         
-        // Show modal only if there are notifications and we haven't shown it yet
-        if (res.data.notifications.length > 0 && !notificationCheckDone) {
-          setShowNotificationModal(true);
+        // Only show modal if explicitly requested and there are new notifications
+        if (showModalOnNewNotifications && res.data.notifications.length > 0) {
+          // Check if there are any new notifications (notifications not seen before)
+          const currentNotificationIds = new Set(res.data.notifications.map(n => n.paymentId));
+          const hasNewNotifications = res.data.notifications.some(n => !lastNotificationIds.has(n.paymentId));
+          
+          if (hasNewNotifications || !notificationCheckDone) {
+            setShowNotificationModal(true);
+            setLastNotificationIds(currentNotificationIds);
+          }
         }
-        setNotificationCheckDone(true);
+        
+        // Mark that we've done the initial notification check
+        if (!notificationCheckDone) {
+          setNotificationCheckDone(true);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
-      setNotificationCheckDone(true);
+      if (!notificationCheckDone) {
+        setNotificationCheckDone(true);
+      }
     }
   };
 
@@ -44,8 +58,8 @@ const Layout = () => {
         transactionDescription: description
       });
       
-      // Refresh notifications after settling
-      fetchNotifications();
+      // Refresh notifications after settling (but don't show modal)
+      fetchNotifications(false);
       
       // Show success message
       alert('Payment settled successfully and transaction created!');
@@ -54,57 +68,58 @@ const Layout = () => {
     }
   };
 
-  // Fetch notifications when component mounts
+  // Fetch notifications when component mounts (show modal for initial notifications)
   useEffect(() => {
     if (user && !notificationCheckDone) {
-      fetchNotifications();
+      fetchNotifications(true);
     }
   }, [user, notificationCheckDone]);
 
-  // Check for notifications periodically (every 5 minutes)
+  // Check for notifications periodically (every 5 minutes) - don't show modal automatically
   useEffect(() => {
-    if (user) {
+    if (user && notificationCheckDone) {
       const interval = setInterval(() => {
-        fetchNotifications();
+        fetchNotifications(false); // Don't show modal on interval checks
       }, 5 * 60 * 1000); // 5 minutes
 
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, notificationCheckDone]);
 
   // Reset notification check when user logs out and refresh on payment settlement
   useEffect(() => {
-    const handleLogout = () => {
+    const handleLogoutEvent = () => {
       setNotificationCheckDone(false);
       setNotifications([]);
       setHasWarnings(false);
       setShowNotificationModal(false);
+      setLastNotificationIds(new Set());
     };
 
     const handlePaymentSettled = () => {
-      fetchNotifications();
+      fetchNotifications(false); // Don't show modal when payment is settled
     };
 
-    window.addEventListener('userLoggedOut', handleLogout);
+    window.addEventListener('userLoggedOut', handleLogoutEvent);
     window.addEventListener('paymentSettled', handlePaymentSettled);
     
     return () => {
-      window.removeEventListener('userLoggedOut', handleLogout);
+      window.removeEventListener('userLoggedOut', handleLogoutEvent);
       window.removeEventListener('paymentSettled', handlePaymentSettled);
     };
   }, []);
 
-  // Refresh notifications when navigating to planned payments page
+  // Refresh notifications when navigating to planned payments page - don't show modal
   useEffect(() => {
-    if (user && location.pathname === '/dashboard/planned-payments') {
+    if (user && location.pathname === '/dashboard/planned-payments' && notificationCheckDone) {
       // Small delay to ensure the page has loaded
       const timer = setTimeout(() => {
-        fetchNotifications();
+        fetchNotifications(false); // Don't show modal on navigation
       }, 1000);
       
       return () => clearTimeout(timer);
     }
-  }, [location.pathname, user]);
+  }, [location.pathname, user, notificationCheckDone]);
 
   const navigationItems = [
     {
