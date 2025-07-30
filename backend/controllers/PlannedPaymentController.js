@@ -12,7 +12,7 @@ class PlannedPaymentController {
     // Create planned payment
     async createPlannedPayment(req, res) {
         try {
-            const { title, description, amount, category, dueDay } = req.body;
+            const { title, description, amount, category, dueDay, paymentType = 'expense' } = req.body;
             const userId = req.user._id; // From auth middleware
 
             // Validation
@@ -20,6 +20,14 @@ class PlannedPaymentController {
                 return res.status(400).json({ 
                     success: false, 
                     message: "Title, amount, category, and due day are required" 
+                });
+            }
+
+            // Validate payment type
+            if (paymentType && !['income', 'expense'].includes(paymentType)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Payment type must be either 'income' or 'expense'"
                 });
             }
 
@@ -67,6 +75,7 @@ class PlannedPaymentController {
                 amount: parseFloat(amount),
                 category: category.trim(),
                 dueDay: parseInt(dueDay),
+                paymentType: paymentType,
                 // If due day is in past, mark as settled immediately
                 lastSettledDate: isInPast ? new Date() : null
             });
@@ -77,7 +86,7 @@ class PlannedPaymentController {
             if (isInPast) {
                 initialTransaction = new Transaction({
                     user: userId,
-                    type: 'expense',
+                    type: paymentType, // Use the payment type for transaction
                     amount: parseFloat(amount),
                     description: `${title.trim()} - Auto-settled (Past Due Date)${description ? ` - ${description.trim()}` : ''}`,
                     category: category.trim()
@@ -186,7 +195,7 @@ class PlannedPaymentController {
     async updatePlannedPayment(req, res) {
         try {
             const { id } = req.params;
-            const { title, description, amount, category, dueDay } = req.body;
+            const { title, description, amount, category, dueDay, paymentType } = req.body;
             const userId = req.user._id;
 
             if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -201,6 +210,14 @@ class PlannedPaymentController {
                 return res.status(400).json({ 
                     success: false, 
                     message: "Amount must be greater than 0" 
+                });
+            }
+
+            // Validate payment type if provided
+            if (paymentType && !['income', 'expense'].includes(paymentType)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Payment type must be either 'income' or 'expense'"
                 });
             }
 
@@ -246,6 +263,7 @@ class PlannedPaymentController {
             if (amount) plannedPayment.amount = parseFloat(amount);
             if (category) plannedPayment.category = category.trim();
             if (dueDay) plannedPayment.dueDay = parseInt(dueDay);
+            if (paymentType) plannedPayment.paymentType = paymentType;
 
             await plannedPayment.save();
             await plannedPayment.populate('user', 'name email');
@@ -344,7 +362,7 @@ class PlannedPaymentController {
             // Create a transaction for this payment
             const transaction = new Transaction({
                 user: userId,
-                type: 'expense',
+                type: plannedPayment.paymentType, // Use the payment type from planned payment
                 amount: plannedPayment.amount,
                 description: transactionDescription || `${plannedPayment.title} - ${plannedPayment.description}`,
                 category: plannedPayment.category
@@ -359,6 +377,7 @@ class PlannedPaymentController {
             plannedPayment.remindersSent = {
                 firstReminderSent: null,
                 secondReminderSent: null,
+                incomeReminderSent: null,
                 month: null
             };
 
@@ -439,56 +458,48 @@ class PlannedPaymentController {
         try {
             const now = new Date();
             const currentMonth = now.toISOString().slice(0, 7);
+            const currentDay = now.getDate();
             
-            // Find payments that need reminders
-            const payments = await PlannedPayment.find({
-                $or: [
-                    // First reminder: 3 days before due date
-                    {
-                        $expr: {
-                            $and: [
-                                { $lte: [{ $subtract: [{ $dayOfMonth: { $dateFromParts: { year: { $year: now }, month: { $month: now }, day: "$dueDay" } } }, 3] }, { $dayOfMonth: now }] },
-                                { $or: [
-                                    { "remindersSent.firstReminderSent": null },
-                                    { $ne: ["$remindersSent.month", currentMonth] }
-                                ]}
-                            ]
-                        }
-                    },
-                    // Second reminder: 1 day before due date
-                    {
-                        $expr: {
-                            $and: [
-                                { $lte: [{ $subtract: [{ $dayOfMonth: { $dateFromParts: { year: { $year: now }, month: { $month: now }, day: "$dueDay" } } }, 1] }, { $dayOfMonth: now }] },
-                                { $or: [
-                                    { "remindersSent.secondReminderSent": null },
-                                    { $ne: ["$remindersSent.month", currentMonth] }
-                                ]}
-                            ]
-                        }
-                    }
-                ]
-            }).populate('user', 'name email');
+            // Find all active payments
+            const payments = await PlannedPayment.find({ isActive: true }).populate('user', 'name email');
 
-            const reminders = payments
-                .filter(payment => payment.isDueThisMonth())
-                .map(payment => {
-                    const daysUntilDue = payment.dueDay - now.getDate();
-                    let reminderType = null;
-                    
-                    if (daysUntilDue <= 1 && (!payment.remindersSent.secondReminderSent || payment.remindersSent.month !== currentMonth)) {
-                        reminderType = 'second'; // 1 day before
-                    } else if (daysUntilDue <= 3 && (!payment.remindersSent.firstReminderSent || payment.remindersSent.month !== currentMonth)) {
-                        reminderType = 'first'; // 3 days before
+            const reminders = [];
+
+            payments.forEach(payment => {
+                if (!payment.isDueThisMonth()) return;
+
+                if (payment.paymentType === 'income') {
+                    // Income reminders: on due date and daily after
+                    if (payment.needsIncomeReminder()) {
+                        const daysOverdue = Math.max(0, currentDay - payment.dueDay);
+                        reminders.push({
+                            payment: payment,
+                            reminderType: 'income',
+                            daysOverdue: daysOverdue,
+                            message: daysOverdue === 0 
+                                ? `Income reminder: "${payment.title}" is due today. Have you received it?`
+                                : `Income reminder: "${payment.title}" is ${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue. Have you received it?`
+                        });
                     }
+                } else {
+                    // Expense reminders: 3 days and 1 day before (existing logic)
+                    const daysUntilDue = payment.dueDay - currentDay;
                     
-                    return reminderType ? {
-                        payment: payment,
-                        reminderType: reminderType,
-                        daysUntilDue: daysUntilDue
-                    } : null;
-                })
-                .filter(reminder => reminder !== null);
+                    if (daysUntilDue <= 1 && daysUntilDue >= 0 && (!payment.remindersSent.secondReminderSent || payment.remindersSent.month !== currentMonth)) {
+                        reminders.push({
+                            payment: payment,
+                            reminderType: 'second',
+                            daysUntilDue: daysUntilDue
+                        });
+                    } else if (daysUntilDue <= 3 && daysUntilDue > 1 && (!payment.remindersSent.firstReminderSent || payment.remindersSent.month !== currentMonth)) {
+                        reminders.push({
+                            payment: payment,
+                            reminderType: 'first',
+                            daysUntilDue: daysUntilDue
+                        });
+                    }
+                }
+            });
 
             res.status(200).json({
                 success: true,
@@ -521,39 +532,68 @@ class PlannedPaymentController {
                 const daysUntilDue = payment.dueDay - currentDay;
                 const status = payment.getStatus();
                 
-                // Add to notifications if:
-                // 1. Payment is overdue
-                // 2. Payment is due within 3 days and still pending
-                if (status === 'overdue' || (status === 'pending' && daysUntilDue <= 3 && daysUntilDue >= 0)) {
-                    let urgency = 'normal';
-                    let message = '';
-                    
-                    if (status === 'overdue') {
-                        urgency = 'high';
-                        const daysPastDue = Math.abs(daysUntilDue);
-                        message = `Payment "${payment.title}" is ${daysPastDue} day${daysPastDue > 1 ? 's' : ''} overdue!`;
-                    } else if (daysUntilDue === 0) {
-                        urgency = 'high';
-                        message = `Payment "${payment.title}" is due today!`;
-                    } else if (daysUntilDue === 1) {
-                        urgency = 'medium';
-                        message = `Payment "${payment.title}" is due tomorrow!`;
-                    } else {
-                        urgency = 'normal';
-                        message = `Payment "${payment.title}" is due in ${daysUntilDue} days`;
-                    }
+                if (payment.paymentType === 'income') {
+                    // Income notifications: on due date and after if not settled
+                    if (status === 'pending' && daysUntilDue <= 0) {
+                        let urgency = 'normal';
+                        let message = '';
+                        const daysOverdue = Math.abs(daysUntilDue);
+                        
+                        if (daysUntilDue === 0) {
+                            urgency = 'medium';
+                            message = `Income "${payment.title}" is due today. Have you received it?`;
+                        } else {
+                            urgency = 'high';
+                            message = `Income "${payment.title}" is ${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue. Have you received it?`;
+                        }
 
-                    notifications.push({
-                        paymentId: payment._id,
-                        title: payment.title,
-                        amount: payment.amount,
-                        category: payment.category,
-                        dueDay: payment.dueDay,
-                        daysUntilDue: daysUntilDue,
-                        status: status,
-                        urgency: urgency,
-                        message: message
-                    });
+                        notifications.push({
+                            paymentId: payment._id,
+                            title: payment.title,
+                            amount: payment.amount,
+                            category: payment.category,
+                            dueDay: payment.dueDay,
+                            daysUntilDue: daysUntilDue,
+                            paymentType: payment.paymentType,
+                            status: status,
+                            urgency: urgency,
+                            message: message
+                        });
+                    }
+                } else {
+                    // Expense notifications: existing logic
+                    if (status === 'overdue' || (status === 'pending' && daysUntilDue <= 3 && daysUntilDue >= 0)) {
+                        let urgency = 'normal';
+                        let message = '';
+                        
+                        if (status === 'overdue') {
+                            urgency = 'high';
+                            const daysPastDue = Math.abs(daysUntilDue);
+                            message = `Payment "${payment.title}" is ${daysPastDue} day${daysPastDue > 1 ? 's' : ''} overdue!`;
+                        } else if (daysUntilDue === 0) {
+                            urgency = 'high';
+                            message = `Payment "${payment.title}" is due today!`;
+                        } else if (daysUntilDue === 1) {
+                            urgency = 'medium';
+                            message = `Payment "${payment.title}" is due tomorrow!`;
+                        } else {
+                            urgency = 'normal';
+                            message = `Payment "${payment.title}" is due in ${daysUntilDue} days`;
+                        }
+
+                        notifications.push({
+                            paymentId: payment._id,
+                            title: payment.title,
+                            amount: payment.amount,
+                            category: payment.category,
+                            dueDay: payment.dueDay,
+                            daysUntilDue: daysUntilDue,
+                            paymentType: payment.paymentType,
+                            status: status,
+                            urgency: urgency,
+                            message: message
+                        });
+                    }
                 }
             });
 

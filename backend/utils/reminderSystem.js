@@ -21,37 +21,53 @@ class ReminderSystem {
                     continue;
                 }
 
-                const daysUntilDue = payment.dueDay - currentDay;
-                
-                // Check for first reminder (3 days before)
-                if (daysUntilDue <= 3 && daysUntilDue > 1) {
-                    const needsFirstReminder = !payment.remindersSent.firstReminderSent || 
-                                             payment.remindersSent.month !== currentMonth;
-                    
-                    if (needsFirstReminder) {
+                if (payment.paymentType === 'income') {
+                    // Income reminders: on due date and daily after
+                    if (payment.needsIncomeReminder()) {
+                        const daysOverdue = Math.max(0, currentDay - payment.dueDay);
                         reminders.push({
                             payment: payment,
-                            reminderType: 'first',
-                            daysUntilDue: daysUntilDue,
-                            message: `Reminder: Your payment "${payment.title}" of ${this.formatCurrency(payment.amount)} is due in ${daysUntilDue} days (${payment.dueDay}th)`
+                            reminderType: 'income',
+                            daysOverdue: daysOverdue,
+                            message: daysOverdue === 0 
+                                ? `Income reminder: Your income "${payment.title}" of ${this.formatCurrency(payment.amount)} is due today. Have you received it?`
+                                : `Income reminder: Your income "${payment.title}" of ${this.formatCurrency(payment.amount)} is ${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue. Have you received it?`
                         });
                     }
-                }
-
-                // Check for second reminder (1 day before)
-                if (daysUntilDue <= 1 && daysUntilDue >= 0) {
-                    const needsSecondReminder = !payment.remindersSent.secondReminderSent || 
-                                              payment.remindersSent.month !== currentMonth;
+                } else {
+                    // Expense reminders: existing logic (3 days and 1 day before)
+                    const daysUntilDue = payment.dueDay - currentDay;
                     
-                    if (needsSecondReminder) {
-                        reminders.push({
-                            payment: payment,
-                            reminderType: 'second',
-                            daysUntilDue: daysUntilDue,
-                            message: daysUntilDue === 0 
-                                ? `Final reminder: Your payment "${payment.title}" of ${this.formatCurrency(payment.amount)} is due today!`
-                                : `Final reminder: Your payment "${payment.title}" of ${this.formatCurrency(payment.amount)} is due tomorrow!`
-                        });
+                    // Check for first reminder (3 days before)
+                    if (daysUntilDue <= 3 && daysUntilDue > 1) {
+                        const needsFirstReminder = !payment.remindersSent.firstReminderSent || 
+                                                 payment.remindersSent.month !== currentMonth;
+                        
+                        if (needsFirstReminder) {
+                            reminders.push({
+                                payment: payment,
+                                reminderType: 'first',
+                                daysUntilDue: daysUntilDue,
+                                message: `Reminder: Your payment "${payment.title}" of ${this.formatCurrency(payment.amount)} is due in ${daysUntilDue} days (${payment.dueDay}th)`
+                            });
+                        }
+                    }
+
+                    // Check for second reminder (1 day before)
+                    if (daysUntilDue <= 1 && daysUntilDue >= 0) {
+                        const needsSecondReminder = !payment.remindersSent.secondReminderSent || 
+                                                  payment.remindersSent.month !== currentMonth;
+                        
+                        if (needsSecondReminder) {
+                            reminders.push({
+                                payment: payment,
+                                reminderType: 'second',
+                                daysUntilDue: daysUntilDue,
+                                message: daysUntilDue === 0 
+                                    ? `Final reminder: Your payment "${payment.title}" of ${this.formatCurrency(payment.amount)} is due today!`
+                                    : `Final reminder: Your payment "${payment.title}" of ${this.formatCurrency(payment.amount)} is due tomorrow!`
+                            });
+                        }
                     }
                 }
             }
@@ -77,6 +93,8 @@ class ReminderSystem {
                 payment.remindersSent.firstReminderSent = new Date();
             } else if (reminderType === 'second') {
                 payment.remindersSent.secondReminderSent = new Date();
+            } else if (reminderType === 'income') {
+                payment.remindersSent.incomeReminderSent = new Date();
             }
             
             payment.remindersSent.month = currentMonth;

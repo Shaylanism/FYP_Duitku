@@ -13,6 +13,7 @@ function PlannedPayments() {
     amount: '',
     category: '',
     dueDay: '',
+    paymentType: 'expense',
     id: null 
   });
   const [loading, setLoading] = useState(false);
@@ -69,8 +70,8 @@ function PlannedPayments() {
     setLoading(true);
     
     // Validation
-    if (!form.title || !form.amount || !form.category || !form.dueDay) {
-      setError('Title, amount, category, and due day are required');
+    if (!form.title || !form.amount || !form.category || !form.dueDay || !form.paymentType) {
+      setError('Title, amount, category, payment type, and due day are required');
       setLoading(false);
       return;
     }
@@ -99,7 +100,8 @@ function PlannedPayments() {
       title: form.title,
       amount: parseFloat(form.amount),
       category: form.category,
-      dueDay: dueDay
+      dueDay: dueDay,
+      paymentType: form.paymentType
     };
 
     // Check if due day is in the past and this is a new payment (not editing)
@@ -130,8 +132,9 @@ function PlannedPayments() {
       setForm({ 
         title: '',
         amount: '',
-        category: categories.expense?.[0] || '',
+        category: getDefaultCategory('expense'),
         dueDay: '',
+        paymentType: 'expense',
         id: null 
       });
       setEditing(false);
@@ -174,6 +177,7 @@ function PlannedPayments() {
       amount: payment.amount.toString(),
       category: payment.category,
       dueDay: payment.dueDay.toString(),
+      paymentType: payment.paymentType || 'expense',
       id: payment._id
     });
     setEditing(true);
@@ -198,8 +202,9 @@ function PlannedPayments() {
 
   // Mark payment as settled
   const handleSettle = async (payment) => {
+    const actionText = payment.paymentType === 'income' ? 'receiving' : 'settling';
     const description = prompt(
-      `Enter transaction description for settling "${payment.title}":`,
+      `Enter transaction description for ${actionText} "${payment.title}":`,
       `${payment.title}`
     );
     
@@ -212,7 +217,10 @@ function PlannedPayments() {
       });
       fetchPlannedPayments();
       setError('');
-      alert('Payment settled successfully and transaction created!');
+      const successMessage = payment.paymentType === 'income' 
+        ? 'Income received successfully and transaction created!'
+        : 'Payment settled successfully and transaction created!';
+      alert(successMessage);
       
       // Dispatch event to refresh notifications in Layout
       window.dispatchEvent(new CustomEvent('paymentSettled'));
@@ -299,18 +307,29 @@ function PlannedPayments() {
   // Generate options for due day based on current month
   const dueDayOptions = Array.from({ length: getDaysInCurrentMonth() }, (_, i) => i + 1);
 
+  // Helper to get available categories based on payment type
+  const getAvailableCategories = (paymentType) => {
+    return paymentType === 'income' ? categories.income : categories.expense;
+  };
+
+  // Helper to get first available category for payment type
+  const getDefaultCategory = (paymentType) => {
+    const availableCategories = getAvailableCategories(paymentType);
+    return availableCategories.length > 0 ? availableCategories[0] : '';
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-800">Planned Payments</h2>
-          <p className="text-gray-600">Manage your recurring bills and payment reminders</p>
+          <p className="text-gray-600">Manage your recurring income and expense payment reminders</p>
         </div>
 
         {/* Payment Form */}
         <form onSubmit={handleSubmit} className="mb-6 p-5 bg-gray-50 rounded-lg">
           <h3 className="mt-0 mb-4">{editing ? 'Edit Planned Payment' : 'Add New Planned Payment'}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
             <div>
               <label className="block mb-1 font-medium">Title *</label>
               <input
@@ -364,6 +383,26 @@ function PlannedPayments() {
               </select>
             </div>
             <div>
+              <label className="block mb-1 font-medium">Payment Type *</label>
+              <select
+                name="paymentType"
+                value={form.paymentType}
+                onChange={(e) => {
+                  const newPaymentType = e.target.value;
+                  setForm({ 
+                    ...form, 
+                    paymentType: newPaymentType,
+                    category: getDefaultCategory(newPaymentType) // Set default category for new payment type
+                  });
+                }}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+              >
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+              </select>
+            </div>
+            <div>
               <label className="block mb-1 font-medium">Category *</label>
               <select
                 name="category"
@@ -373,7 +412,7 @@ function PlannedPayments() {
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
               >
                 <option value="">Select category...</option>
-                {categories.expense.map((category) => (
+                {getAvailableCategories(form.paymentType).map((category) => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -400,8 +439,9 @@ function PlannedPayments() {
                   setForm({ 
                     title: '',
                     amount: '',
-                    category: categories.expense?.[0] || '',
+                    category: getDefaultCategory('expense'),
                     dueDay: '',
+                    paymentType: 'expense',
                     id: null 
                   }); 
                   setEditing(false); 
@@ -425,6 +465,7 @@ function PlannedPayments() {
               <thead>
                 <tr>
                   <th className="border-b-2 border-gray-300 text-left py-3 px-2">Title</th>
+                  <th className="border-b-2 border-gray-300 text-left py-3 px-2">Type</th>
                   <th className="border-b-2 border-gray-300 text-left py-3 px-2">Category</th>
                   <th className="border-b-2 border-gray-300 text-right py-3 px-2">Amount</th>
                   <th className="border-b-2 border-gray-300 text-center py-3 px-2">Due Day</th>
@@ -446,6 +487,15 @@ function PlannedPayments() {
                             <div className="text-sm text-gray-600">{payment.description}</div>
                           )}
                         </div>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          payment.paymentType === 'income' 
+                            ? 'bg-blue-200 text-blue-800' 
+                            : 'bg-gray-200 text-gray-800'
+                        }`}>
+                          {payment.paymentType === 'income' ? 'Income' : 'Expense'}
+                        </span>
                       </td>
                       <td className="py-3 px-2 text-gray-600">{payment.category}</td>
                       <td className="py-3 px-2 text-right font-medium">{formatCurrency(payment.amount)}</td>
@@ -473,7 +523,10 @@ function PlannedPayments() {
                               disabled={settlingPayment === payment._id}
                               className="px-2 py-1 bg-green-600 text-white border-none rounded cursor-pointer text-xs hover:bg-green-700 transition-colors"
                             >
-                              {settlingPayment === payment._id ? 'Settling...' : 'Settle'}
+                              {settlingPayment === payment._id 
+                                ? 'Settling...' 
+                                : payment.paymentType === 'income' ? 'Received' : 'Settle'
+                              }
                             </button>
                           )}
                           <button 
@@ -495,7 +548,7 @@ function PlannedPayments() {
                 })}
                 {plannedPayments.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="text-center text-gray-500 py-5">
+                    <td colSpan="8" className="text-center text-gray-500 py-5">
                       No planned payments found. Add your first payment plan above!
                     </td>
                   </tr>

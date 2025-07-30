@@ -28,6 +28,12 @@ const plannedPaymentSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    paymentType: {
+        type: String,
+        required: true,
+        enum: ['income', 'expense'],
+        default: 'expense'
+    },
     dueDay: {
         type: Number,
         required: true,
@@ -58,6 +64,10 @@ const plannedPaymentSchema = new mongoose.Schema({
             default: null
         },
         secondReminderSent: {
+            type: Date,
+            default: null
+        },
+        incomeReminderSent: {
             type: Date,
             default: null
         },
@@ -121,6 +131,33 @@ plannedPaymentSchema.methods.isOverdue = function() {
     // Check if we've passed the due date this month and payment hasn't been settled
     if (now > currentDueDate && this.isDueThisMonth()) {
         return true;
+    }
+    
+    return false;
+};
+
+// Method to check if income payment needs reminder (on due date or after)
+plannedPaymentSchema.methods.needsIncomeReminder = function() {
+    if (this.paymentType !== 'income') return false;
+    
+    const now = new Date();
+    const currentDay = now.getDate();
+    const currentMonth = now.toISOString().slice(0, 7);
+    
+    // Only remind if payment is due this month and not settled
+    if (!this.isDueThisMonth()) return false;
+    
+    // Remind on due date and every day after
+    if (currentDay >= this.dueDay) {
+        // Check if we already sent reminder today
+        const lastReminderDate = this.remindersSent.incomeReminderSent;
+        if (!lastReminderDate) return true;
+        
+        const lastReminderDay = lastReminderDate.getDate();
+        const lastReminderMonth = lastReminderDate.toISOString().slice(0, 7);
+        
+        // Send reminder if it's a new day or new month
+        return (currentDay !== lastReminderDay) || (currentMonth !== lastReminderMonth);
     }
     
     return false;

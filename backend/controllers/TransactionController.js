@@ -30,10 +30,10 @@ class TransactionController {
             const userId = req.user._id; // From auth middleware
 
             // Validation
-            if (!type || !amount || !description || !category) {
+            if (!type || !amount || !category) {
                 return res.status(400).json({ 
                     success: false, 
-                    message: "Type, amount, description, and category are required" 
+                    message: "Type, amount, and category are required" 
                 });
             }
 
@@ -51,8 +51,8 @@ class TransactionController {
                 });
             }
 
-            // Validate description length
-            if (description.trim().length > 90) {
+            // Validate description length if provided
+            if (description && description.trim().length > 90) {
                 return res.status(400).json({
                     success: false,
                     message: "Description cannot exceed 90 characters"
@@ -68,12 +68,24 @@ class TransactionController {
                 });
             }
 
+            // Income validation for expense transactions
+            if (type === 'expense') {
+                const incomeValidation = await this.validateIncomeForExpense(userId, parseFloat(amount));
+                if (!incomeValidation.isValid) {
+                    return res.status(400).json({
+                        success: false,
+                        message: incomeValidation.message,
+                        errorType: incomeValidation.errorType
+                    });
+                }
+            }
+
             // Create new transaction
             const newTransaction = new Transaction({
                 user: userId,
                 type,
                 amount: parseFloat(amount),
-                description: description.trim(),
+                description: description ? description.trim() : '',
                 category
             });
             
@@ -245,20 +257,41 @@ class TransactionController {
             }
 
             // Validate category if provided and using predefined categories only
-            const finalType = type || transaction.type;
+            const transactionType = type || transaction.type;
             if (category) {
-                const validCategories = Transaction.getCategoriesByType(finalType);
+                const validCategories = Transaction.getCategoriesByType(transactionType);
                 if (!validCategories.includes(category)) {
                     // For updates, we'll be more permissive to maintain backward compatibility
                     // But we'll still provide feedback about valid categories
-                    console.warn(`Category '${category}' is not in predefined list for ${finalType}. Valid categories are: ${validCategories.join(', ')}`);
+                    console.warn(`Category '${category}' is not in predefined list for ${transactionType}. Valid categories are: ${validCategories.join(', ')}`);
+                }
+            }
+
+            // Income validation for expense transactions during updates
+            const finalAmount = amount ? parseFloat(amount) : transaction.amount;
+            
+            if (transactionType === 'expense') {
+                // Calculate the amount difference for validation
+                const amountDifference = transaction.type === 'expense' 
+                    ? finalAmount - transaction.amount 
+                    : finalAmount;
+                
+                if (amountDifference > 0) {
+                    const incomeValidation = await this.validateIncomeForExpense(userId, amountDifference, transaction._id);
+                    if (!incomeValidation.isValid) {
+                        return res.status(400).json({
+                            success: false,
+                            message: incomeValidation.message,
+                            errorType: incomeValidation.errorType
+                        });
+                    }
                 }
             }
 
             // Update fields
             if (type) transaction.type = type;
             if (amount) transaction.amount = parseFloat(amount);
-            if (description) transaction.description = description.trim();
+            if (description !== undefined) transaction.description = description ? description.trim() : '';
             if (category) transaction.category = category;
 
             await transaction.save();
@@ -346,6 +379,69 @@ class TransactionController {
                 success: false, 
                 message: "Failed to fetch transaction"
             });
+        }
+    }
+
+    // Helper method to validate income for expense transactions
+    async validateIncomeForExpense(userId, expenseAmount, excludeTransactionId = null) {
+        try {
+            // Get user's total income
+            const incomeQuery = { user: userId, type: 'income' };
+            const totalIncomeResult = await Transaction.aggregate([
+                { $match: incomeQuery },
+                { $group: { _id: null, total: { $sum: '$amount' } } }
+            ]);
+            const totalIncome = totalIncomeResult[0]?.total || 0;
+
+            // Check if user has any income
+            if (totalIncome === 0) {
+                return {
+                    isValid: false,
+                    message: "You cannot add expenses without any recorded income. Please add an income transaction first.",
+                    errorType: "NO_INCOME"
+                };
+            }
+
+            // Get user's total expenses (excluding the transaction being updated if any)
+            const expenseQuery = { user: userId, type: 'expense' };
+            if (excludeTransactionId) {
+                expenseQuery._id = { $ne: excludeTransactionId };
+            }
+            
+            const totalExpenseResult = await Transaction.aggregate([
+                { $match: expenseQuery },
+                { $group: { _id: null, total: { $sum: '$amount' } } }
+            ]);
+            const totalExpenses = totalExpenseResult[0]?.total || 0;
+
+            // Check if new expense would exceed income
+            const potentialTotalExpenses = totalExpenses + expenseAmount;
+            if (potentialTotalExpenses > totalIncome) {
+                const availableAmount = totalIncome - totalExpenses;
+                return {
+                    isValid: false,
+                    message: `Insufficient income. You have RM${availableAmount.toFixed(2)} available to spend, but you're trying to spend RM${expenseAmount.toFixed(2)}.`,
+                    errorType: "INSUFFICIENT_INCOME",
+                    details: {
+                        totalIncome,
+                        totalExpenses,
+                        availableAmount,
+                        requestedAmount: expenseAmount
+                    }
+                };
+            }
+
+            return {
+                isValid: true,
+                message: "Income validation passed"
+            };
+        } catch (error) {
+            console.error("Error validating income:", error.message);
+            return {
+                isValid: false,
+                message: "Failed to validate income. Please try again.",
+                errorType: "VALIDATION_ERROR"
+            };
         }
     }
 }

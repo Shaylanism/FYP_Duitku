@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from './contexts/AuthContext';
 import { getCurrentMonth, isCurrentMonth } from './utils/monthUtils';
 import MonthFilter from './components/MonthFilter';
+import IncomeValidationModal from './components/IncomeValidationModal';
 
 const API_URL = '/api/transactions';
 
@@ -188,6 +189,7 @@ function TransactionDashboard() {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [filterType, setFilterType] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [incomeModal, setIncomeModal] = useState({ isOpen: false, errorType: '', message: '', details: null });
   const { user } = useAuth();
 
   // Fetch categories
@@ -279,8 +281,8 @@ function TransactionDashboard() {
     setLoading(true);
     
     // Validation
-    if (!form.amount || !form.description || !form.category) {
-      setError('Amount, description, and category are required');
+    if (!form.amount || !form.category) {
+      setError('Amount and category are required');
       setLoading(false);
       return;
     }
@@ -291,7 +293,7 @@ function TransactionDashboard() {
       return;
     }
 
-    if (form.description.trim().length > 90) {
+    if (form.description && form.description.trim().length > 90) {
       setError('Description cannot exceed 90 characters');
       setLoading(false);
       return;
@@ -326,7 +328,19 @@ function TransactionDashboard() {
       fetchTransactions(selectedMonth, filterType, filterCategory);
       setError('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save transaction');
+      const errorData = err.response?.data;
+      
+      // Handle income validation errors with modal
+      if (errorData?.errorType === 'NO_INCOME' || errorData?.errorType === 'INSUFFICIENT_INCOME') {
+        setIncomeModal({
+          isOpen: true,
+          errorType: errorData.errorType,
+          message: errorData.message,
+          details: errorData.details || null
+        });
+      } else {
+        setError(errorData?.message || 'Failed to save transaction');
+      }
     }
     setLoading(false);
   };
@@ -537,15 +551,14 @@ function TransactionDashboard() {
               </div>
               
               <div>
-                <label className="banking-label">Description</label>
+                <label className="banking-label">Description <span className="text-neutral-400 text-sm">(Optional)</span></label>
                 <input
                   type="text"
                   name="description"
-                  placeholder="Enter transaction description"
+                  placeholder="Enter transaction description (optional)"
                   value={form.description}
                   onChange={handleChange}
                   maxLength={90}
-                  required
                   className="banking-input"
                 />
                 <div className="flex justify-between items-center mt-2">
@@ -732,7 +745,7 @@ function TransactionDashboard() {
                           {transaction.type === 'income' ? 'Income' : 'Expense'}
                         </span>
                       </td>
-                      <td className="font-medium">{transaction.description}</td>
+                      <td className="font-medium">{transaction.description || 'No description'}</td>
                       <td className="text-neutral-600">{transaction.category}</td>
                       <td className={`text-right font-bold ${
                         transaction.type === 'income' ? 'text-success-600' : 'text-error-600'
@@ -794,6 +807,15 @@ function TransactionDashboard() {
           )}
         </div>
       </div>
+
+      {/* Income Validation Modal */}
+      <IncomeValidationModal
+        isOpen={incomeModal.isOpen}
+        onClose={() => setIncomeModal({ isOpen: false, errorType: '', message: '', details: null })}
+        errorType={incomeModal.errorType}
+        message={incomeModal.message}
+        details={incomeModal.details}
+      />
     </div>
   );
 }
