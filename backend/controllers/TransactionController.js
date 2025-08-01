@@ -1,5 +1,6 @@
 import Transaction from "../models/Transaction.js";
 import mongoose from "mongoose";
+import { validateExpenseTransactionCreation } from "../utils/plannedPaymentValidation.js";
 
 class TransactionController {
     // Get categories for transaction types
@@ -70,6 +71,17 @@ class TransactionController {
 
             // Income validation for expense transactions
             if (type === 'expense') {
+                // Check for overdue expense planned payments first
+                const overdueValidation = await validateExpenseTransactionCreation(userId);
+                if (!overdueValidation.isValid) {
+                    return res.status(400).json({
+                        success: false,
+                        message: overdueValidation.message,
+                        errorType: overdueValidation.errorType,
+                        overduePayments: overdueValidation.overduePayments
+                    });
+                }
+
                 const incomeValidation = await this.validateIncomeForExpense(userId, parseFloat(amount));
                 if (!incomeValidation.isValid) {
                     return res.status(400).json({
@@ -271,6 +283,17 @@ class TransactionController {
             const finalAmount = amount ? parseFloat(amount) : transaction.amount;
             
             if (transactionType === 'expense') {
+                // Check for overdue expense planned payments first
+                const overdueValidation = await validateExpenseTransactionCreation(userId);
+                if (!overdueValidation.isValid) {
+                    return res.status(400).json({
+                        success: false,
+                        message: overdueValidation.message,
+                        errorType: overdueValidation.errorType,
+                        overduePayments: overdueValidation.overduePayments
+                    });
+                }
+
                 // Calculate the amount difference for validation
                 const amountDifference = transaction.type === 'expense' 
                     ? finalAmount - transaction.amount 

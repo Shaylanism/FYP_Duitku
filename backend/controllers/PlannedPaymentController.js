@@ -7,6 +7,7 @@ import {
     isDueDayInPast,
     getNextMonthDueDate 
 } from "../utils/dateUtils.js";
+import { validatePlannedPaymentCreation, validateBalanceForExpenseSettlement } from "../utils/plannedPaymentValidation.js";
 
 class PlannedPaymentController {
     // Create planned payment
@@ -60,6 +61,27 @@ class PlannedPaymentController {
                 return res.status(400).json({
                     success: false,
                     message: `Due day must be between 1 and ${maxDays} for the current month`
+                });
+            }
+
+            // Check for overdue expense planned payments first (pass payment type)
+            const overdueValidation = await validatePlannedPaymentCreation(userId, paymentType);
+            if (!overdueValidation.isValid) {
+                return res.status(400).json({
+                    success: false,
+                    message: overdueValidation.message,
+                    errorType: overdueValidation.errorType,
+                    overduePayments: overdueValidation.overduePayments
+                });
+            }
+
+            // Check if due day is today (current day) - prevent same day planned payments
+            const now = new Date();
+            const currentDay = now.getDate();
+            if (parseInt(dueDay) === currentDay) {
+                return res.status(400).json({
+                    success: false,
+                    message: "You cannot create a planned payment for the current day. Please select a different due day."
                 });
             }
 
@@ -351,12 +373,25 @@ class PlannedPaymentController {
 
 
 
-            // Check if already settled this month
-            if (!plannedPayment.isDueThisMonth()) {
+            // Check if already settled this month (allow settling overdue payments too)
+            if (!plannedPayment.isDueThisMonth() && !plannedPayment.isOverdue()) {
                 return res.status(400).json({
                     success: false,
                     message: "Payment has already been settled for this month"
                 });
+            }
+
+            // Validate balance for expense payments
+            if (plannedPayment.paymentType === 'expense') {
+                const balanceValidation = await validateBalanceForExpenseSettlement(userId, plannedPayment.amount);
+                if (!balanceValidation.isValid) {
+                    return res.status(400).json({
+                        success: false,
+                        message: balanceValidation.message,
+                        errorType: balanceValidation.errorType,
+                        details: balanceValidation.details
+                    });
+                }
             }
 
             // Create a transaction for this payment

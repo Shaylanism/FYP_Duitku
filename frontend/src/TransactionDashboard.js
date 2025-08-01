@@ -4,6 +4,8 @@ import { useAuth } from './contexts/AuthContext';
 import { getCurrentMonth, isCurrentMonth } from './utils/monthUtils';
 import MonthFilter from './components/MonthFilter';
 import IncomeValidationModal from './components/IncomeValidationModal';
+import OverduePaymentModal from './components/OverduePaymentModal';
+import InsufficientBalanceModal from './components/InsufficientBalanceModal';
 
 const API_URL = '/api/transactions';
 
@@ -190,6 +192,8 @@ function TransactionDashboard() {
   const [filterType, setFilterType] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [incomeModal, setIncomeModal] = useState({ isOpen: false, errorType: '', message: '', details: null });
+  const [overdueModal, setOverdueModal] = useState({ isOpen: false, overduePayments: [] });
+  const [insufficientBalanceModal, setInsufficientBalanceModal] = useState({ isOpen: false, message: '', details: null });
   const { user } = useAuth();
 
   // Fetch categories
@@ -335,6 +339,19 @@ function TransactionDashboard() {
         setIncomeModal({
           isOpen: true,
           errorType: errorData.errorType,
+          message: errorData.message,
+          details: errorData.details || null
+        });
+      } else if (errorData?.errorType === 'OVERDUE_PLANNED_PAYMENTS') {
+        // Handle overdue planned payments error with modal
+        setOverdueModal({
+          isOpen: true,
+          overduePayments: errorData.overduePayments || []
+        });
+      } else if (errorData?.errorType === 'INSUFFICIENT_BALANCE') {
+        // Handle insufficient balance error with modal
+        setInsufficientBalanceModal({
+          isOpen: true,
           message: errorData.message,
           details: errorData.details || null
         });
@@ -815,6 +832,22 @@ function TransactionDashboard() {
         errorType={incomeModal.errorType}
         message={incomeModal.message}
         details={incomeModal.details}
+      />
+
+      {/* Overdue Payment Modal */}
+      <OverduePaymentModal
+        isOpen={overdueModal.isOpen}
+        onClose={() => setOverdueModal({ isOpen: false, overduePayments: [] })}
+        overduePayments={overdueModal.overduePayments}
+        actionType="transaction"
+      />
+
+      {/* Insufficient Balance Modal */}
+      <InsufficientBalanceModal
+        isOpen={insufficientBalanceModal.isOpen}
+        onClose={() => setInsufficientBalanceModal({ isOpen: false, message: '', details: null })}
+        message={insufficientBalanceModal.message}
+        details={insufficientBalanceModal.details}
       />
     </div>
   );

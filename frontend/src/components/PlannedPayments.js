@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import PastDueDateModal from './PastDueDateModal';
+import OverduePaymentModal from './OverduePaymentModal';
+import InsufficientBalanceModal from './InsufficientBalanceModal';
 
 const API_URL = '/api/planned-payments';
 const TRANSACTIONS_API = '/api/transactions';
@@ -22,6 +24,10 @@ function PlannedPayments() {
   const [settlingPayment, setSettlingPayment] = useState(null);
   const [showPastDueModal, setShowPastDueModal] = useState(false);
   const [pendingPaymentData, setPendingPaymentData] = useState(null);
+  const [showOverdueModal, setShowOverdueModal] = useState(false);
+  const [overduePayments, setOverduePayments] = useState([]);
+  const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
+  const [balanceError, setBalanceError] = useState({ message: '', details: null });
 
   // Fetch categories from transactions API
   const fetchCategories = async () => {
@@ -90,8 +96,16 @@ function PlannedPayments() {
 
     const dueDay = parseInt(form.dueDay);
     const maxDaysInMonth = getDaysInCurrentMonth();
+    const currentDay = new Date().getDate();
+    
     if (dueDay < 1 || dueDay > maxDaysInMonth) {
       setError(`Due day must be between 1 and ${maxDaysInMonth} for the current month`);
+      setLoading(false);
+      return;
+    }
+    
+    if (dueDay === currentDay) {
+      setError('You cannot create a planned payment for the current day. Please select a different due day.');
       setLoading(false);
       return;
     }
@@ -149,7 +163,15 @@ function PlannedPayments() {
         window.dispatchEvent(new CustomEvent('paymentSettled'));
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save planned payment');
+      const errorData = err.response?.data;
+      
+      // Handle overdue planned payments error with modal
+      if (errorData?.errorType === 'OVERDUE_PLANNED_PAYMENTS') {
+        setOverduePayments(errorData.overduePayments || []);
+        setShowOverdueModal(true);
+      } else {
+        setError(errorData?.message || 'Failed to save planned payment');
+      }
     }
     setLoading(false);
   };
@@ -225,7 +247,18 @@ function PlannedPayments() {
       // Dispatch event to refresh notifications in Layout
       window.dispatchEvent(new CustomEvent('paymentSettled'));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to settle payment');
+      const errorData = err.response?.data;
+      
+      // Handle insufficient balance error with modal
+      if (errorData?.errorType === 'INSUFFICIENT_BALANCE') {
+        setBalanceError({
+          message: errorData.message,
+          details: errorData.details
+        });
+        setShowInsufficientBalanceModal(true);
+      } else {
+        setError(errorData?.message || 'Failed to settle payment');
+      }
     }
     setSettlingPayment(null);
   };
@@ -304,8 +337,10 @@ function PlannedPayments() {
     return new Date(nextYear, nextMonth, validDueDay);
   };
 
-  // Generate options for due day based on current month
-  const dueDayOptions = Array.from({ length: getDaysInCurrentMonth() }, (_, i) => i + 1);
+  // Generate options for due day based on current month, excluding current day
+  const currentDay = new Date().getDate();
+  const dueDayOptions = Array.from({ length: getDaysInCurrentMonth() }, (_, i) => i + 1)
+    .filter(day => day !== currentDay);
 
   // Helper to get available categories based on payment type
   const getAvailableCategories = (paymentType) => {
@@ -517,11 +552,15 @@ function PlannedPayments() {
                       </td>
                       <td className="py-3 px-2 text-center">
                         <div className="flex gap-1 justify-center flex-wrap">
-                          {payment.status === 'pending' && (
+                          {(payment.status === 'pending' || payment.status === 'overdue') && (
                             <button 
                               onClick={() => handleSettle(payment)}
                               disabled={settlingPayment === payment._id}
-                              className="px-2 py-1 bg-green-600 text-white border-none rounded cursor-pointer text-xs hover:bg-green-700 transition-colors"
+                              className={`px-2 py-1 text-white border-none rounded cursor-pointer text-xs transition-colors ${
+                                payment.status === 'overdue' 
+                                  ? 'bg-red-600 hover:bg-red-700' 
+                                  : 'bg-green-600 hover:bg-green-700'
+                              }`}
                             >
                               {settlingPayment === payment._id 
                                 ? 'Settling...' 
@@ -567,6 +606,22 @@ function PlannedPayments() {
         paymentTitle={pendingPaymentData?.title || ''}
         dueDay={pendingPaymentData?.dueDay || 0}
         nextDueDate={pendingPaymentData ? getNextMonthDueDate(pendingPaymentData.dueDay) : null}
+      />
+
+      {/* Overdue Payment Modal */}
+      <OverduePaymentModal
+        isOpen={showOverdueModal}
+        onClose={() => setShowOverdueModal(false)}
+        overduePayments={overduePayments}
+        actionType="planned_payment"
+      />
+
+      {/* Insufficient Balance Modal */}
+      <InsufficientBalanceModal
+        isOpen={showInsufficientBalanceModal}
+        onClose={() => setShowInsufficientBalanceModal(false)}
+        message={balanceError.message}
+        details={balanceError.details}
       />
     </div>
   );
