@@ -15,6 +15,7 @@ const FinancialReportExport = () => {
   const [useAlternativeMethod, setUseAlternativeMethod] = useState(false);
   const [dynamicLibrariesLoaded, setDynamicLibrariesLoaded] = useState(false);
   const [dynamicLibraries, setDynamicLibraries] = useState(null);
+  const [includeTransactionHistory, setIncludeTransactionHistory] = useState(false);
   const { user } = useAuth();
 
   // Load PDF libraries dynamically for alternative method
@@ -84,17 +85,46 @@ const FinancialReportExport = () => {
     }
   }, [useAlternativeMethod, dynamicLibrariesLoaded]);
 
+  // Fetch transaction history data
+  const fetchTransactionHistory = async (month) => {
+    try {
+      const params = { limit: 1000 };
+      if (month) params.month = month;
+      
+      const res = await axios.get('/api/transaction-history', { params });
+      return res.data.history || [];
+    } catch (err) {
+      console.error('Failed to fetch transaction history:', err);
+      return [];
+    }
+  };
+
   // Fetch comprehensive financial data for preview
   const fetchTransactionData = async (month) => {
     setLoading(true);
     setError('');
     try {
-      // Fetch transactions, budgets, and planned payments in parallel
-      const [transactionsRes, budgetsRes, plannedPaymentsRes] = await Promise.all([
+      // Base requests
+      const baseRequests = [
         axios.get('/api/transactions', { params: { month } }),
         axios.get('/api/budgets/with-spending', { params: { month, limit: 1000 } }), // Get budgets with spending calculations
         axios.get('/api/planned-payments', { params: { limit: 1000 } }) // Get all planned payments
-      ]);
+      ];
+
+      // Execute base requests
+      const [transactionsRes, budgetsRes, plannedPaymentsRes] = await Promise.all(baseRequests);
+
+      // Fetch transaction history separately if needed
+      let transactionHistory = [];
+      if (includeTransactionHistory) {
+        try {
+          transactionHistory = await fetchTransactionHistory(month);
+          console.log('Transaction history fetched:', transactionHistory?.length || 0, 'entries');
+        } catch (historyError) {
+          console.error('Failed to fetch transaction history:', historyError);
+          // Continue without transaction history rather than failing completely
+        }
+      }
 
       // Filter planned payments for the selected month
       const filteredPlannedPayments = filterPlannedPaymentsByMonth(
@@ -108,11 +138,18 @@ const FinancialReportExport = () => {
         budgets: budgetsRes.data.budgets || [],
         budgetSummary: budgetsRes.data.summary || { totalBudgetAmount: 0 },
         plannedPayments: filteredPlannedPayments,
-        plannedPaymentSummary: calculatePlannedPaymentSummary(filteredPlannedPayments)
+        plannedPaymentSummary: calculatePlannedPaymentSummary(filteredPlannedPayments),
+        transactionHistory: transactionHistory || []
       };
 
+      console.log('Combined data prepared:');
+      console.log('- Transaction records:', combinedData.transactions?.length || 0);
+      console.log('- Budget categories:', combinedData.budgets?.length || 0);
+      console.log('- Planned payments:', combinedData.plannedPayments?.length || 0);
+      console.log('- Transaction history:', combinedData.transactionHistory?.length || 0);
       setPreviewData(combinedData);
     } catch (err) {
+      console.error('Error in fetchTransactionData:', err);
       setError('Failed to fetch financial data');
     }
     setLoading(false);
@@ -161,7 +198,7 @@ const FinancialReportExport = () => {
 
   useEffect(() => {
     fetchTransactionData(selectedMonth);
-  }, [selectedMonth]);
+  }, [selectedMonth, includeTransactionHistory]);
 
   const handleMonthChange = (newMonth) => {
     setSelectedMonth(newMonth);
@@ -346,7 +383,7 @@ const FinancialReportExport = () => {
     const balance = previewData.summary?.balance || 0;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.text('NET BALANCE', 25, summaryY + (lineHeight * 4.8));
+    doc.text('MONTHLY BALANCE', 25, summaryY + (lineHeight * 4.8));
     
     // Set color based on balance (green for positive, red for negative)
     if (balance >= 0) {
@@ -357,12 +394,12 @@ const FinancialReportExport = () => {
     doc.text(formatCurrency(balance), 165, summaryY + (lineHeight * 4.8), { align: 'right' });
     doc.setTextColor(0, 0, 0); // Reset to black
     
-    // Transaction History Section
+    // Transaction Records Section
     if (previewData.transactions.length > 0) {
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(218, 165, 32); // Gold
-      doc.text('TRANSACTION HISTORY', 20, 153);
+      doc.text('TRANSACTION RECORDS', 20, 153);
       doc.setTextColor(0, 0, 0); // Reset to black
 
       // Prepare data for table with single amount column
@@ -425,246 +462,14 @@ const FinancialReportExport = () => {
           }
         }
       });
-
-      // Category breakdown
-      const categoryBreakdown = {};
-      previewData.transactions.forEach(transaction => {
-        const key = `${transaction.type}-${transaction.category}`;
-        if (!categoryBreakdown[key]) {
-          categoryBreakdown[key] = {
-            type: transaction.type,
-            category: transaction.category,
-            total: 0,
-            count: 0
-          };
-        }
-        categoryBreakdown[key].total += transaction.amount;
-        categoryBreakdown[key].count += 1;
-      });
-
-      // Get current Y position after transactions table
-      let currentY = doc.lastAutoTable?.finalY || doc.autoTable?.previous?.finalY || 125;
-
-      // Budget Analysis Section - New Page
-      if (previewData.budgets && Array.isArray(previewData.budgets) && previewData.budgets.length > 0) {
-        doc.addPage();
-        
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(218, 165, 32); // Gold
-        doc.text('BUDGET ANALYSIS', 20, 30);
-        doc.setTextColor(0, 0, 0); // Reset to black
-
-        const budgetData = previewData.budgets.map(budget => {
-          const remaining = budget.remainingBalance || budget.budgetAmount;
-          return [
-            budget.category,
-            formatCurrency(budget.budgetAmount),
-            formatCurrency(budget.spent || 0),
-            formatCurrency(remaining),
-            remaining >= 0 ? 'On Track' : 'Over Budget'
-          ];
-        });
-
-        tableFunction(doc, {
-          head: [['CATEGORY', 'ALLOCATED', 'SPENT', 'REMAINING', 'STATUS']],
-          body: budgetData,
-          startY: 40,
-          theme: 'plain',
-          headStyles: { 
-            fillColor: [248, 248, 248], // Very light gray
-            textColor: [0, 0, 0], // Black text
-            fontSize: 9,
-            fontStyle: 'bold',
-            cellPadding: 4,
-            lineColor: [218, 165, 32], // Gold border
-            lineWidth: 0.5
-          },
-          bodyStyles: { 
-            fontSize: 8,
-            cellPadding: 3,
-            lineColor: [230, 230, 230], // Light gray borders
-            lineWidth: 0.2
-          },
-          columnStyles: {
-            0: { cellWidth: 40, fontSize: 8 }, // Category
-            1: { cellWidth: 30, halign: 'right', fontSize: 8 }, // Allocated
-            2: { cellWidth: 30, halign: 'right', fontSize: 8 }, // Spent
-            3: { cellWidth: 30, halign: 'right', fontSize: 8 }, // Remaining
-            4: { cellWidth: 20, halign: 'center', fontSize: 8 } // Status
-          },
-          margin: { left: 20, right: 20 },
-          styles: {
-            overflow: 'linebreak',
-            cellPadding: 3,
-            fontSize: 8,
-            valign: 'middle'
-          },
-          alternateRowStyles: {
-            fillColor: [252, 252, 252] // Very subtle alternate row color
-          },
-          didParseCell: function(data) {
-            // Color code the status column
-            if (data.column.index === 4) { // Status column
-              if (data.cell.text[0] === 'Over Budget') {
-                data.cell.styles.textColor = [220, 20, 60]; // Red
-                data.cell.styles.fontStyle = 'bold';
-              } else {
-                data.cell.styles.textColor = [34, 139, 34]; // Green
-              }
-            }
-            // Color code remaining balance
-            if (data.column.index === 3) { // Remaining column
-              const remaining = parseFloat(data.cell.text[0].replace(/[^0-9.-]+/g, ""));
-              if (remaining < 0) {
-                data.cell.styles.textColor = [220, 20, 60]; // Red for negative
-              }
-            }
-          }
-        });
-      }
-
-      // Planned Payments Section - New Page
-      if (previewData.plannedPayments && Array.isArray(previewData.plannedPayments) && previewData.plannedPayments.length > 0) {
-        doc.addPage();
-        
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(218, 165, 32); // Gold
-        doc.text('PLANNED PAYMENTS', 20, 30);
-        doc.setTextColor(0, 0, 0); // Reset to black
-
-        const plannedPaymentData = previewData.plannedPayments.map(payment => [
-          payment.title,
-          payment.category,
-          `${payment.dueDay}${getOrdinalSuffix(payment.dueDay)}`,
-          formatCurrency(payment.amount),
-          payment.status ? payment.status.charAt(0).toUpperCase() + payment.status.slice(1) : 'Pending'
-        ]);
-
-        tableFunction(doc, {
-          head: [['PAYEE', 'CATEGORY', 'DUE DATE', 'AMOUNT', 'STATUS']],
-          body: plannedPaymentData,
-          startY: 40,
-          theme: 'plain',
-          headStyles: { 
-            fillColor: [248, 248, 248], // Very light gray
-            textColor: [0, 0, 0], // Black text
-            fontSize: 9,
-            fontStyle: 'bold',
-            cellPadding: 4,
-            lineColor: [218, 165, 32], // Gold border
-            lineWidth: 0.5
-          },
-          bodyStyles: { 
-            fontSize: 8,
-            cellPadding: 3,
-            lineColor: [230, 230, 230], // Light gray borders
-            lineWidth: 0.2
-          },
-          columnStyles: {
-            0: { cellWidth: 40, fontSize: 8 }, // Payee
-            1: { cellWidth: 30, fontSize: 8 }, // Category
-            2: { cellWidth: 20, halign: 'center', fontSize: 8 }, // Due Date
-            3: { cellWidth: 25, halign: 'right', fontSize: 8 }, // Amount
-            4: { cellWidth: 25, halign: 'center', fontSize: 8 } // Status
-          },
-          margin: { left: 20, right: 20 },
-          styles: {
-            overflow: 'linebreak',
-            cellPadding: 3,
-            fontSize: 8,
-            valign: 'middle'
-          },
-          alternateRowStyles: {
-            fillColor: [252, 252, 252] // Very subtle alternate row color
-          },
-          didParseCell: function(data) {
-            // Color code the status column
-            if (data.column.index === 4) { // Status column
-              const status = data.cell.text[0].toLowerCase();
-              if (status === 'overdue') {
-                data.cell.styles.textColor = [220, 20, 60]; // Red
-                data.cell.styles.fontStyle = 'bold';
-              } else if (status === 'settled') {
-                data.cell.styles.textColor = [34, 139, 34]; // Green
-              } else {
-                data.cell.styles.textColor = [218, 165, 32]; // Gold for pending
-              }
-            }
-          }
-        });
-      }
-
-        // Category Summary - New Page
-        if (Object.keys(categoryBreakdown).length > 0) {
-        doc.addPage();
-        
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(218, 165, 32); // Gold
-        doc.text('CATEGORY SUMMARY', 20, 30);
-        doc.setTextColor(0, 0, 0); // Reset to black
-
-        const categoryData = Object.values(categoryBreakdown).map(item => [
-          item.type.charAt(0).toUpperCase() + item.type.slice(1),
-          item.category,
-          item.count.toString(),
-          formatCurrency(item.total)
-        ]);
-
-        tableFunction(doc, {
-          head: [['TYPE', 'CATEGORY', 'COUNT', 'TOTAL']],
-          body: categoryData,
-          startY: 40,
-          theme: 'plain',
-          headStyles: { 
-            fillColor: [248, 248, 248], // Very light gray
-            textColor: [0, 0, 0], // Black text
-            fontSize: 9,
-            fontStyle: 'bold',
-            cellPadding: 4,
-            lineColor: [218, 165, 32], // Gold border
-            lineWidth: 0.5
-          },
-          bodyStyles: { 
-            fontSize: 8,
-            cellPadding: 3,
-            lineColor: [230, 230, 230], // Light gray borders
-            lineWidth: 0.2
-          },
-          columnStyles: {
-            0: { cellWidth: 25, fontSize: 8, halign: 'center' }, // Type
-            1: { cellWidth: 50, fontSize: 8 }, // Category
-            2: { cellWidth: 20, halign: 'center', fontSize: 8 }, // Count
-            3: { cellWidth: 35, halign: 'right', fontSize: 8 } // Total
-          },
-          margin: { left: 20, right: 20 },
-          styles: {
-            overflow: 'linebreak',
-            cellPadding: 3,
-            fontSize: 8,
-            valign: 'middle'
-          },
-          alternateRowStyles: {
-            fillColor: [252, 252, 252] // Very subtle alternate row color
-          },
-          didParseCell: function(data) {
-            // Color code based on type
-            if (data.column.index === 0) { // Type column
-              if (data.cell.text[0] === 'Income') {
-                data.cell.styles.textColor = [34, 139, 34]; // Green
-                data.cell.styles.fontStyle = 'bold';
-              } else {
-                data.cell.styles.textColor = [220, 20, 60]; // Red
-                data.cell.styles.fontStyle = 'bold';
-              }
-            }
-          }
-        });
-      }
     } else {
       // No transactions message - professional styling
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(218, 165, 32); // Gold
+      doc.text('TRANSACTION RECORDS', 20, 153);
+      doc.setTextColor(0, 0, 0); // Reset to black
+      
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 100, 100); // Gray
@@ -672,33 +477,331 @@ const FinancialReportExport = () => {
       doc.setTextColor(0, 0, 0); // Reset to black
     }
 
-      // Professional Footer
-      const pageHeight = 297; // A4 height in mm
-      const footerY = pageHeight - 25;
+    // Budget Breakdown Section - Always check independently
+    if (previewData.budgets && Array.isArray(previewData.budgets) && previewData.budgets.length > 0) {
+      console.log('Adding Budget Breakdown section to PDF:', previewData.budgets.length, 'categories');
+      doc.addPage();
       
-      // Footer divider line
-      doc.setDrawColor(218, 165, 32); // Gold
-      doc.setLineWidth(0.5);
-      doc.line(20, footerY - 5, 190, footerY - 5);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(218, 165, 32); // Gold
+      doc.text('BUDGET BREAKDOWN', 20, 30);
+      doc.setTextColor(0, 0, 0); // Reset to black
+
+      const budgetData = previewData.budgets.map(budget => {
+        const remaining = budget.remainingBalance || budget.budgetAmount;
+        return [
+          budget.category,
+          formatCurrency(budget.budgetAmount),
+          formatCurrency(budget.spent || 0),
+          formatCurrency(remaining),
+          remaining >= 0 ? 'On Track' : 'Over Budget'
+        ];
+      });
+
+      tableFunction(doc, {
+        head: [['CATEGORY', 'ALLOCATED', 'SPENT', 'REMAINING', 'STATUS']],
+        body: budgetData,
+        startY: 40,
+        theme: 'plain',
+        headStyles: { 
+          fillColor: [248, 248, 248], // Very light gray
+          textColor: [0, 0, 0], // Black text
+          fontSize: 9,
+          fontStyle: 'bold',
+          cellPadding: 4,
+          lineColor: [218, 165, 32], // Gold border
+          lineWidth: 0.5
+        },
+        bodyStyles: { 
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [230, 230, 230], // Light gray borders
+          lineWidth: 0.2
+        },
+        columnStyles: {
+          0: { cellWidth: 40, fontSize: 8 }, // Category
+          1: { cellWidth: 30, halign: 'right', fontSize: 8 }, // Allocated
+          2: { cellWidth: 30, halign: 'right', fontSize: 8 }, // Spent
+          3: { cellWidth: 30, halign: 'right', fontSize: 8 }, // Remaining
+          4: { cellWidth: 20, halign: 'center', fontSize: 8 } // Status
+        },
+        margin: { left: 20, right: 20 },
+        styles: {
+          overflow: 'linebreak',
+          cellPadding: 3,
+          fontSize: 8,
+          valign: 'middle'
+        },
+        alternateRowStyles: {
+          fillColor: [252, 252, 252] // Very subtle alternate row color
+        },
+        didParseCell: function(data) {
+          // Color code the status column
+          if (data.column.index === 4) { // Status column
+            if (data.cell.text[0] === 'Over Budget') {
+              data.cell.styles.textColor = [220, 20, 60]; // Red
+              data.cell.styles.fontStyle = 'bold';
+            } else {
+              data.cell.styles.textColor = [34, 139, 34]; // Green
+            }
+          }
+          // Color code remaining balance
+          if (data.column.index === 3) { // Remaining column
+            const remaining = parseFloat(data.cell.text[0].replace(/[^0-9.-]+/g, ""));
+            if (remaining < 0) {
+              data.cell.styles.textColor = [220, 20, 60]; // Red for negative
+            }
+          }
+        }
+      });
+    }
+
+    // Planned Payments Section - Always check independently
+    if (previewData.plannedPayments && Array.isArray(previewData.plannedPayments) && previewData.plannedPayments.length > 0) {
+      console.log('Adding Planned Payments section to PDF:', previewData.plannedPayments.length, 'payments');
+      doc.addPage();
       
-      // Footer text
-      doc.setFontSize(8);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(218, 165, 32); // Gold
+      doc.text('PLANNED PAYMENTS', 20, 30);
+      doc.setTextColor(0, 0, 0); // Reset to black
+
+      const plannedPaymentData = previewData.plannedPayments.map(payment => [
+        payment.title,
+        payment.category,
+        `${payment.dueDay}${getOrdinalSuffix(payment.dueDay)}`,
+        formatCurrency(payment.amount),
+        payment.status ? payment.status.charAt(0).toUpperCase() + payment.status.slice(1) : 'Pending'
+      ]);
+
+      tableFunction(doc, {
+        head: [['PAYEE', 'CATEGORY', 'DUE DATE', 'AMOUNT', 'STATUS']],
+        body: plannedPaymentData,
+        startY: 40,
+        theme: 'plain',
+        headStyles: { 
+          fillColor: [248, 248, 248], // Very light gray
+          textColor: [0, 0, 0], // Black text
+          fontSize: 9,
+          fontStyle: 'bold',
+          cellPadding: 4,
+          lineColor: [218, 165, 32], // Gold border
+          lineWidth: 0.5
+        },
+        bodyStyles: { 
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [230, 230, 230], // Light gray borders
+          lineWidth: 0.2
+        },
+        columnStyles: {
+          0: { cellWidth: 40, fontSize: 8 }, // Payee
+          1: { cellWidth: 30, fontSize: 8 }, // Category
+          2: { cellWidth: 20, halign: 'center', fontSize: 8 }, // Due Date
+          3: { cellWidth: 25, halign: 'right', fontSize: 8 }, // Amount
+          4: { cellWidth: 25, halign: 'center', fontSize: 8 } // Status
+        },
+        margin: { left: 20, right: 20 },
+        styles: {
+          overflow: 'linebreak',
+          cellPadding: 3,
+          fontSize: 8,
+          valign: 'middle'
+        },
+        alternateRowStyles: {
+          fillColor: [252, 252, 252] // Very subtle alternate row color
+        },
+        didParseCell: function(data) {
+          // Color code the status column
+          if (data.column.index === 4) { // Status column
+            const status = data.cell.text[0].toLowerCase();
+            if (status === 'overdue') {
+              data.cell.styles.textColor = [220, 20, 60]; // Red
+              data.cell.styles.fontStyle = 'bold';
+            } else if (status === 'settled') {
+              data.cell.styles.textColor = [34, 139, 34]; // Green
+            } else {
+              data.cell.styles.textColor = [218, 165, 32]; // Gold for pending
+            }
+          }
+        }
+      });
+    }
+
+      // Sections moved above
+
+    // Transaction History (Audit Trail) Section - Always check independently if enabled
+    if (includeTransactionHistory && previewData.transactionHistory && Array.isArray(previewData.transactionHistory) && previewData.transactionHistory.length > 0) {
+      console.log('Adding transaction history to PDF:', previewData.transactionHistory.length, 'entries');
+      doc.addPage();
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(218, 165, 32); // Gold
+      doc.text('TRANSACTION HISTORY', 20, 30);
+      doc.setTextColor(0, 0, 0); // Reset to black
+
+      // Add description
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 100, 100); // Gray
+      doc.text('Complete audit trail of all transaction changes and activities', 20, 38);
+      doc.setTextColor(0, 0, 0); // Reset to black
+
+      const historyData = previewData.transactionHistory.map(entry => {
+        // Format the action description
+        let actionDesc = entry.actionDescription || entry.action;
+        if (entry.action === 'CREATE') actionDesc = 'Created';
+        else if (entry.action === 'UPDATE') actionDesc = 'Updated';
+        else if (entry.action === 'DELETE') actionDesc = 'Deleted';
+        else if (entry.action === 'SETTLE_PLANNED_PAYMENT') actionDesc = 'Settled Payment';
+        else if (entry.action === 'RECEIVE_PLANNED_PAYMENT') actionDesc = 'Received Payment';
+
+        // Format transaction details
+        let details = entry.description || '';
+        if (entry.newData) {
+          details += ` (${entry.newData.type}: ${formatCurrency(entry.newData.amount)} - ${entry.newData.category})`;
+        } else if (entry.previousData) {
+          details += ` (${entry.previousData.type}: ${formatCurrency(entry.previousData.amount)} - ${entry.previousData.category})`;
+        }
+
+        return [
+          entry.formattedDate || new Date(entry.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          actionDesc,
+          details
+        ];
+      });
       
-      // Left side - Confidentiality notice
-      doc.text('CONFIDENTIAL: This statement is for the account holder only.', 20, footerY);
-      doc.text('Please review and report any discrepancies immediately.', 20, footerY + 5);
+      console.log('Transaction history data prepared for PDF:', historyData.length, 'rows');
+
+      tableFunction(doc, {
+        head: [['DATE & TIME', 'ACTION', 'DETAILS']],
+        body: historyData,
+        startY: 48,
+        theme: 'plain',
+        headStyles: { 
+          fillColor: [248, 248, 248], // Very light gray
+          textColor: [0, 0, 0], // Black text
+          fontSize: 9,
+          fontStyle: 'bold',
+          cellPadding: 4,
+          lineColor: [218, 165, 32], // Gold border
+          lineWidth: 0.5
+        },
+        bodyStyles: { 
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [230, 230, 230], // Light gray borders
+          lineWidth: 0.2
+        },
+        columnStyles: {
+          0: { cellWidth: 35, fontSize: 8 }, // Date & Time
+          1: { cellWidth: 25, fontSize: 8, halign: 'center' }, // Action
+          2: { cellWidth: 90, fontSize: 8 } // Details
+        },
+        margin: { left: 20, right: 20 },
+        styles: {
+          overflow: 'linebreak',
+          cellPadding: 3,
+          fontSize: 8,
+          valign: 'middle'
+        },
+        alternateRowStyles: {
+          fillColor: [252, 252, 252] // Very subtle alternate row color
+        },
+        didParseCell: function(data) {
+          // Color code the action column
+          if (data.column.index === 1) { // Action column
+            const action = data.cell.text[0].toLowerCase();
+            if (action === 'created') {
+              data.cell.styles.textColor = [34, 139, 34]; // Green
+              data.cell.styles.fontStyle = 'bold';
+            } else if (action === 'updated') {
+              data.cell.styles.textColor = [218, 165, 32]; // Gold
+              data.cell.styles.fontStyle = 'bold';
+            } else if (action === 'deleted') {
+              data.cell.styles.textColor = [220, 20, 60]; // Red
+              data.cell.styles.fontStyle = 'bold';
+            } else {
+              data.cell.styles.textColor = [100, 100, 100]; // Gray for other actions
+            }
+          }
+        }
+      });
+    } else if (includeTransactionHistory) {
+      // Add a page indicating no transaction history found
+      doc.addPage();
       
-      // Right side - Contact info
-      doc.text('DuitKu Financial Management App', 190, footerY, { align: 'right' });
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(218, 165, 32); // Gold
+      doc.text('TRANSACTION HISTORY', 20, 30);
+      doc.setTextColor(0, 0, 0); // Reset to black
+
+      // Add description
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100); // Gray
+      doc.text('Complete audit trail of all transaction changes and activities', 20, 38);
+      doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Center - Page info
-      doc.setFont('helvetica', 'italic');
-      doc.text('*** END OF STATEMENT ***', 105, footerY + 12, { align: 'center' });
+      // No data message
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100); // Gray
+      doc.text('No transaction history recorded for this period.', 105, 100, { align: 'center' });
+      doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Reset text color
-      doc.setTextColor(0, 0, 0);
+      console.log('No transaction history data available for PDF');
+    }
+
+      // Add page numbers to all pages
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        
+        // Professional Footer
+        const pageHeight = 297; // A4 height in mm
+        const footerY = pageHeight - 25;
+        
+        // Footer divider line
+        doc.setDrawColor(218, 165, 32); // Gold
+        doc.setLineWidth(0.5);
+        doc.line(20, footerY - 5, 190, footerY - 5);
+        
+        // Footer text
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100); // Gray
+        
+        // Left side - Confidentiality notice
+        doc.text('CONFIDENTIAL: This statement is for the account holder only.', 20, footerY);
+        doc.text('Please review and report any discrepancies immediately.', 20, footerY + 5);
+        
+        // Right side - Contact info
+        doc.text('DuitKu Financial Management App', 190, footerY, { align: 'right' });
+        
+        // Center - Page info with page numbers
+        doc.setFont('helvetica', 'italic');
+        if (i === totalPages) {
+          doc.text('*** END OF STATEMENT ***', 105, footerY + 12, { align: 'center' });
+        }
+        
+        // Page number
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Page ${i} of ${totalPages}`, 105, footerY + 17, { align: 'center' });
+        
+        // Reset text color
+        doc.setTextColor(0, 0, 0);
+      }
 
       // Save the PDF with professional naming
       const methodSuffix = useAlternativeMethod ? '-Dynamic' : '';
@@ -769,8 +872,8 @@ const FinancialReportExport = () => {
             )}
           </div>
 
-          {/* Month Selection */}
-          <div className="flex items-center space-x-4">
+          {/* Month Selection and Report Options */}
+          <div className="flex items-end space-x-4">
             <MonthFilter
               selectedMonth={selectedMonth}
               onMonthChange={handleMonthChange}
@@ -778,10 +881,28 @@ const FinancialReportExport = () => {
               label="Report Month"
               showReturnButton={false}
             />
+            
+            {/* Transaction History Option */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-2">Include Options</label>
+              <div className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="includeTransactionHistory"
+                  checked={includeTransactionHistory}
+                  onChange={(e) => setIncludeTransactionHistory(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="includeTransactionHistory" className="text-sm text-gray-700 cursor-pointer">
+                  Transaction History
+                </label>
+              </div>
+            </div>
+            
             <button
               onClick={generatePDF}
               disabled={loading || !previewData || generatingPDF || (useAlternativeMethod && (!dynamicLibrariesLoaded || !dynamicLibraries))}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-6 py-2 rounded-lg font-medium transition-colors h-10 ${
                 loading || !previewData || generatingPDF || (useAlternativeMethod && (!dynamicLibrariesLoaded || !dynamicLibraries))
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -834,7 +955,7 @@ const FinancialReportExport = () => {
                 <h4 className={`font-medium mb-2 ${
                   (previewData.summary?.balance || 0) >= 0 ? 'text-blue-800' : 'text-orange-800'
                 }`}>
-                  Net Balance
+                  Monthly Balance
                 </h4>
                 <p className={`text-xl font-bold ${
                   (previewData.summary?.balance || 0) >= 0 ? 'text-blue-900' : 'text-orange-900'
@@ -845,7 +966,7 @@ const FinancialReportExport = () => {
             </div>
 
             {/* Data Overview */}
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-white rounded border">
                 <p className="text-gray-700">
                   <span className="font-bold text-lg text-blue-600">{previewData.transactions?.length || 0}</span>
@@ -864,13 +985,17 @@ const FinancialReportExport = () => {
                 </p>
                 <p className="text-sm text-gray-600">Planned Payments</p>
               </div>
+              {includeTransactionHistory && (
+                <div className="text-center p-3 bg-white rounded border">
+                  <p className="text-gray-700">
+                    <span className="font-bold text-lg text-purple-600">{previewData.transactionHistory?.length || 0}</span>
+                  </p>
+                  <p className="text-sm text-gray-600">History Entries</p>
+                </div>
+              )}
             </div>
 
-            <div className="mb-4">
-              <p className="text-sm text-gray-600">
-                This report includes your comprehensive financial data: transactions, budgets, planned payments, and category breakdowns.
-              </p>
-            </div>
+
 
             {/* Recent Transactions Preview */}
             {previewData.transactions && previewData.transactions.length > 0 && (
@@ -982,12 +1107,14 @@ const FinancialReportExport = () => {
               </div>
             )}
 
+            {/* Show message only if ALL sections are empty */}
             {previewData.transactions && previewData.transactions.length === 0 && 
              (!previewData.budgets || previewData.budgets.length === 0) &&
-             (!previewData.plannedPayments || previewData.plannedPayments.length === 0) && (
+             (!previewData.plannedPayments || previewData.plannedPayments.length === 0) &&
+             (!includeTransactionHistory || !previewData.transactionHistory || previewData.transactionHistory.length === 0) && (
               <div className="text-center py-8">
                 <p className="text-gray-500">No financial data found for the selected month.</p>
-                <p className="text-sm text-gray-400 mt-1">The PDF will show an empty report with summary totals.</p>
+                <p className="text-sm text-gray-400 mt-1">The PDF will show sections with summary information only.</p>
               </div>
             )}
           </div>
