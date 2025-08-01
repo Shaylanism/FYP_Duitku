@@ -753,7 +753,7 @@ function TransactionDashboard() {
               </svg>
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-neutral-900">Transaction History</h3>
+              <h3 className="text-xl font-semibold text-neutral-900">Transaction Records</h3>
               <p className="text-neutral-600">{transactions.length} transaction{transactions.length !== 1 ? 's' : ''} found</p>
             </div>
           </div>

@@ -3,9 +3,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import axios from 'axios';
 import PaymentNotificationModal from './PaymentNotificationModal';
+import UserProfileDropdown from './UserProfileDropdown';
 
 const Layout = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
   const [notifications, setNotifications] = useState([]);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -13,10 +14,6 @@ const Layout = () => {
   const [notificationCheckDone, setNotificationCheckDone] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [lastNotificationIds, setLastNotificationIds] = useState(new Set());
-
-  const handleLogout = () => {
-    logout();
-  };
 
   // Fetch payment notifications
   const fetchNotifications = async (showModalOnNewNotifications = false) => {
@@ -211,26 +208,7 @@ const Layout = () => {
           </div>
         </div>
 
-        {/* User Info */}
-        {!sidebarCollapsed && (
-          <div className="p-6 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200">
-            <div className="flex items-center space-x-3">
-              <div className="h-12 w-12 bg-gradient-to-r from-primary-400 to-primary-500 rounded-xl flex items-center justify-center">
-                <span className="text-white font-semibold text-lg">
-                  {user?.name?.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-neutral-900 truncate">
-                  Welcome back,
-                </p>
-                <p className="text-lg font-bold text-primary-700 truncate">
-                  {user?.name}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
@@ -267,21 +245,7 @@ const Layout = () => {
           })}
         </nav>
 
-        {/* Logout Section */}
-        <div className="p-4 border-t border-neutral-200">
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center px-4 py-3 text-error-600 hover:bg-error-50 rounded-xl transition-all duration-200 group"
-            title={sidebarCollapsed ? 'Logout' : ''}
-          >
-            <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            {!sidebarCollapsed && (
-              <span className="font-medium">Logout</span>
-            )}
-          </button>
-        </div>
+
       </div>
 
       {/* Main Content Area */}
@@ -318,17 +282,9 @@ const Layout = () => {
                   </button>
                 )}
                 
-                {/* User Menu */}
-                <div className="flex items-center space-x-3 pl-4 border-l border-neutral-200">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-neutral-900">{user?.name}</p>
-                    <p className="text-xs text-neutral-500">{user?.email}</p>
-                  </div>
-                  <div className="h-10 w-10 bg-gradient-to-r from-primary-400 to-primary-500 rounded-xl flex items-center justify-center">
-                    <span className="text-white font-semibold">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
+                {/* User Profile Dropdown */}
+                <div className="pl-4 border-l border-neutral-200">
+                  <UserProfileDropdown />
                 </div>
               </div>
             </div>
