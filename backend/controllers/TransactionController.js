@@ -1,4 +1,5 @@
 import Transaction from "../models/Transaction.js";
+import Budget from "../models/Budget.js";
 import mongoose from "mongoose";
 import { validateExpenseTransactionCreation } from "../utils/plannedPaymentValidation.js";
 
@@ -24,10 +25,47 @@ class TransactionController {
         }
     }
 
+    // Check budget exceedance endpoint
+    async checkBudgetForTransaction(req, res) {
+        try {
+            const { category, amount } = req.query;
+            const userId = req.user._id;
+
+            // Validation
+            if (!category || !amount) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Category and amount are required"
+                });
+            }
+
+            const transactionAmount = parseFloat(amount);
+            if (transactionAmount <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Amount must be greater than 0"
+                });
+            }
+
+            const budgetCheck = await this.checkBudgetExceedance(userId, category, transactionAmount);
+
+            res.status(200).json({
+                success: true,
+                ...budgetCheck
+            });
+        } catch (error) {
+            console.error("Error checking budget for transaction:", error.message);
+            res.status(500).json({
+                success: false,
+                message: "Failed to check budget for transaction"
+            });
+        }
+    }
+
     // Create transaction
     async createTransaction(req, res) {
         try {
-            const { type, amount, description, category } = req.body;
+            const { type, amount, description, category, forceBudgetOverride } = req.body;
             const userId = req.user._id; // From auth middleware
 
             // Validation
@@ -89,6 +127,19 @@ class TransactionController {
                         message: incomeValidation.message,
                         errorType: incomeValidation.errorType
                     });
+                }
+
+                // Check budget exceedance for expense transactions
+                if (!forceBudgetOverride) {
+                    const budgetCheck = await this.checkBudgetExceedance(userId, category, parseFloat(amount));
+                    if (budgetCheck.hasExceedance) {
+                        return res.status(400).json({
+                            success: false,
+                            message: "This transaction will exceed your budget",
+                            errorType: "BUDGET_EXCEEDED",
+                            budgetInfo: budgetCheck.budgetInfo
+                        });
+                    }
                 }
             }
 
@@ -226,7 +277,7 @@ class TransactionController {
     async updateTransaction(req, res) {
         try {
             const { id } = req.params;
-            const { type, amount, description, category } = req.body;
+            const { type, amount, description, category, forceBudgetOverride } = req.body;
             const userId = req.user._id;
 
             if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -281,6 +332,7 @@ class TransactionController {
 
             // Income validation for expense transactions during updates
             const finalAmount = amount ? parseFloat(amount) : transaction.amount;
+            const finalCategory = category || transaction.category;
             
             if (transactionType === 'expense') {
                 // Check for overdue expense planned payments first
@@ -306,6 +358,19 @@ class TransactionController {
                             success: false,
                             message: incomeValidation.message,
                             errorType: incomeValidation.errorType
+                        });
+                    }
+                }
+
+                // Check budget exceedance for expense transaction updates
+                if (!forceBudgetOverride) {
+                    const budgetCheck = await this.checkBudgetExceedance(userId, finalCategory, finalAmount, transaction._id);
+                    if (budgetCheck.hasExceedance) {
+                        return res.status(400).json({
+                            success: false,
+                            message: "This transaction update will exceed your budget",
+                            errorType: "BUDGET_EXCEEDED",
+                            budgetInfo: budgetCheck.budgetInfo
                         });
                     }
                 }
@@ -402,6 +467,80 @@ class TransactionController {
                 success: false, 
                 message: "Failed to fetch transaction"
             });
+        }
+    }
+
+    // Helper method to check budget exceedance for expense transactions
+    async checkBudgetExceedance(userId, category, amount, excludeTransactionId = null) {
+        try {
+            const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+
+            // Check if budget exists for this category and current month
+            const budget = await Budget.findOne({
+                user: userId,
+                category: category.trim(),
+                month: currentMonth
+            });
+
+            if (!budget) {
+                return {
+                    hasExceedance: false,
+                    hasBudget: false
+                };
+            }
+
+            // Create date range for the current month
+            const startDate = new Date(`${currentMonth}-01T00:00:00.000Z`);
+            const endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + 1);
+
+            // Get existing transactions for this category and month
+            const query = {
+                user: userId,
+                category: category.trim(),
+                type: 'expense',
+                createdAt: {
+                    $gte: startDate,
+                    $lt: endDate
+                }
+            };
+
+            // Exclude the transaction being updated if any
+            if (excludeTransactionId) {
+                query._id = { $ne: excludeTransactionId };
+            }
+
+            const transactions = await Transaction.find(query);
+
+            // Calculate total spent
+            const currentSpent = transactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+            const totalAfterTransaction = currentSpent + amount;
+            const remainingBudget = budget.budgetAmount - currentSpent;
+            const exceedanceAmount = totalAfterTransaction - budget.budgetAmount;
+
+            const hasExceedance = totalAfterTransaction > budget.budgetAmount;
+
+            return {
+                hasExceedance,
+                hasBudget: true,
+                budgetInfo: {
+                    category: budget.category,
+                    budgetAmount: budget.budgetAmount,
+                    currentSpent,
+                    remainingBudget,
+                    transactionAmount: amount,
+                    totalAfterTransaction,
+                    exceedanceAmount: hasExceedance ? exceedanceAmount : 0,
+                    month: currentMonth
+                }
+            };
+        } catch (error) {
+            console.error("Error checking budget exceedance:", error.message);
+            return {
+                hasExceedance: false,
+                hasBudget: false,
+                error: "Failed to check budget exceedance"
+            };
         }
     }
 

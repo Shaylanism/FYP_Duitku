@@ -556,6 +556,102 @@ class BudgetController {
             });
         }
     }
+
+    // Check if transaction would exceed budget
+    async checkBudgetExceedance(req, res) {
+        try {
+            const { category, amount, month } = req.query;
+            const userId = req.user._id;
+
+            // Validation
+            if (!category || !amount || !month) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Category, amount, and month are required"
+                });
+            }
+
+            // Validate month format (YYYY-MM)
+            const monthRegex = /^\d{4}-\d{2}$/;
+            if (!monthRegex.test(month)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Month must be in YYYY-MM format"
+                });
+            }
+
+            const transactionAmount = parseFloat(amount);
+            if (transactionAmount <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Amount must be greater than 0"
+                });
+            }
+
+            // Check if budget exists for this category and month
+            const budget = await Budget.findOne({
+                user: userId,
+                category: category.trim(),
+                month
+            });
+
+            if (!budget) {
+                return res.status(200).json({
+                    success: true,
+                    hasExceedance: false,
+                    hasBudget: false,
+                    message: "No budget set for this category"
+                });
+            }
+
+            // Create date range for the entire month
+            const startDate = new Date(`${month}-01T00:00:00.000Z`);
+            const endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + 1);
+
+            // Get existing transactions for this category and month
+            const transactions = await Transaction.find({
+                user: userId,
+                category: category.trim(),
+                type: 'expense',
+                createdAt: {
+                    $gte: startDate,
+                    $lt: endDate
+                }
+            });
+
+            // Calculate total spent
+            const currentSpent = transactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+            const totalAfterTransaction = currentSpent + transactionAmount;
+            const remainingBudget = budget.budgetAmount - currentSpent;
+            const exceedanceAmount = totalAfterTransaction - budget.budgetAmount;
+
+            const hasExceedance = totalAfterTransaction > budget.budgetAmount;
+
+            res.status(200).json({
+                success: true,
+                hasExceedance,
+                hasBudget: true,
+                budgetInfo: {
+                    category: budget.category,
+                    budgetAmount: budget.budgetAmount,
+                    currentSpent,
+                    remainingBudget,
+                    transactionAmount,
+                    totalAfterTransaction,
+                    exceedanceAmount: hasExceedance ? exceedanceAmount : 0,
+                    month
+                }
+            });
+
+        } catch (error) {
+            console.error("Error checking budget exceedance:", error.message);
+            res.status(500).json({
+                success: false,
+                message: "Failed to check budget exceedance"
+            });
+        }
+    }
 }
 
 export default new BudgetController(); 

@@ -6,6 +6,7 @@ import MonthFilter from './components/MonthFilter';
 import IncomeValidationModal from './components/IncomeValidationModal';
 import OverduePaymentModal from './components/OverduePaymentModal';
 import InsufficientBalanceModal from './components/InsufficientBalanceModal';
+import BudgetExceedModal from './components/BudgetExceedModal';
 
 const API_URL = '/api/transactions';
 
@@ -194,6 +195,7 @@ function TransactionDashboard() {
   const [incomeModal, setIncomeModal] = useState({ isOpen: false, errorType: '', message: '', details: null });
   const [overdueModal, setOverdueModal] = useState({ isOpen: false, overduePayments: [] });
   const [insufficientBalanceModal, setInsufficientBalanceModal] = useState({ isOpen: false, message: '', details: null });
+  const [budgetExceedModal, setBudgetExceedModal] = useState({ isOpen: false, budgetInfo: null });
   const { user } = useAuth();
 
   // Fetch categories
@@ -279,45 +281,24 @@ function TransactionDashboard() {
     }
   };
 
-  // Add or update transaction
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    // Validation
-    if (!form.amount || !form.category) {
-      setError('Amount and category are required');
-      setLoading(false);
-      return;
-    }
-
-    if (parseFloat(form.amount) <= 0) {
-      setError('Amount must be greater than 0');
-      setLoading(false);
-      return;
-    }
-
-    if (form.description && form.description.trim().length > 90) {
-      setError('Description cannot exceed 90 characters');
-      setLoading(false);
-      return;
-    }
-
+  // Handle transaction submission (with or without budget override)
+  const submitTransaction = async (forceBudgetOverride = false) => {
     try {
+      const payload = {
+        type: form.type,
+        amount: parseFloat(form.amount),
+        description: form.description,
+        category: form.category
+      };
+
+      if (forceBudgetOverride) {
+        payload.forceBudgetOverride = true;
+      }
+
       if (editing) {
-        await axios.put(`${API_URL}/${form.id}`, {
-          type: form.type,
-          amount: parseFloat(form.amount),
-          description: form.description,
-          category: form.category
-        });
+        await axios.put(`${API_URL}/${form.id}`, payload);
       } else {
-        await axios.post(API_URL, {
-          type: form.type,
-          amount: parseFloat(form.amount),
-          description: form.description,
-          category: form.category
-        });
+        await axios.post(API_URL, payload);
       }
       
       // Reset form with default values
@@ -331,6 +312,11 @@ function TransactionDashboard() {
       setEditing(false);
       fetchTransactions(selectedMonth, filterType, filterCategory);
       setError('');
+      
+      // Close any open modals
+      setBudgetExceedModal({ isOpen: false, budgetInfo: null });
+      
+      return true;
     } catch (err) {
       const errorData = err.response?.data;
       
@@ -355,10 +341,51 @@ function TransactionDashboard() {
           message: errorData.message,
           details: errorData.details || null
         });
+      } else if (errorData?.errorType === 'BUDGET_EXCEEDED') {
+        // Handle budget exceeded error with modal
+        setBudgetExceedModal({
+          isOpen: true,
+          budgetInfo: errorData.budgetInfo
+        });
       } else {
         setError(errorData?.message || 'Failed to save transaction');
       }
+      return false;
     }
+  };
+
+  // Add or update transaction
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    // Validation
+    if (!form.amount || !form.category) {
+      setError('Amount and category are required');
+      setLoading(false);
+      return;
+    }
+
+    if (parseFloat(form.amount) <= 0) {
+      setError('Amount must be greater than 0');
+      setLoading(false);
+      return;
+    }
+
+    if (form.description && form.description.trim().length > 90) {
+      setError('Description cannot exceed 90 characters');
+      setLoading(false);
+      return;
+    }
+
+    await submitTransaction(false);
+    setLoading(false);
+  };
+
+  // Handle proceeding with budget override
+  const handleBudgetOverride = async () => {
+    setLoading(true);
+    await submitTransaction(true);
     setLoading(false);
   };
 
@@ -848,6 +875,14 @@ function TransactionDashboard() {
         onClose={() => setInsufficientBalanceModal({ isOpen: false, message: '', details: null })}
         message={insufficientBalanceModal.message}
         details={insufficientBalanceModal.details}
+      />
+
+      {/* Budget Exceed Modal */}
+      <BudgetExceedModal
+        isOpen={budgetExceedModal.isOpen}
+        onClose={() => setBudgetExceedModal({ isOpen: false, budgetInfo: null })}
+        onProceed={handleBudgetOverride}
+        budgetInfo={budgetExceedModal.budgetInfo}
       />
     </div>
   );
