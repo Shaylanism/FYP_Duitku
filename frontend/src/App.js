@@ -9,6 +9,7 @@ import BudgetPlanner from './components/BudgetPlanner';
 import PlannedPayments from './components/PlannedPayments';
 import RetirementPlanner from './components/RetirementPlanner';
 import FinancialReportExport from './components/FinancialReportExport';
+import AIChatbot from './components/AIChatbot';
 
 // Loading Component
 const LoadingScreen = () => (
@@ -92,6 +93,7 @@ function AppContent() {
           <Route path="planned-payments" element={<PlannedPayments />} />
           <Route path="retirement-planner" element={<RetirementPlanner />} />
           <Route path="export-report" element={<FinancialReportExport />} />
+          <Route path="ai-chatbot" element={<AIChatbot />} />
           <Route index element={<Navigate to="transactions" replace />} />
         </Route>
         

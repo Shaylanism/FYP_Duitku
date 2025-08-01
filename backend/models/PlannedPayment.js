@@ -38,7 +38,7 @@ const plannedPaymentSchema = new mongoose.Schema({
         type: Number,
         required: true,
         min: 1,
-        max: 31 // Day of the month (1-31). Note: Controller validates against actual month days for new entries
+        max: 31 // Day of the month (1-31). Controller validates against actual month days for new entries
     },
     isActive: {
         type: Boolean,
@@ -72,7 +72,7 @@ const plannedPaymentSchema = new mongoose.Schema({
             default: null
         },
         month: {
-            type: String, // YYYY-MM format to track which month reminders were sent
+            type: String, // Uses YYYY-MM format to track which month reminders were sent
             default: null
         }
     }
