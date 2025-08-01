@@ -569,7 +569,7 @@ class PlannedPaymentController {
                 
                 if (payment.paymentType === 'income') {
                     // Income notifications: on due date and after if not settled
-                    if (status === 'pending' && daysUntilDue <= 0) {
+                    if ((status === 'pending' || status === 'overdue') && daysUntilDue <= 0) {
                         let urgency = 'normal';
                         let message = '';
                         const daysOverdue = Math.abs(daysUntilDue);

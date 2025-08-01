@@ -45,9 +45,10 @@ const PaymentNotificationModal = ({ isOpen, onClose, notifications, onSettlePaym
   };
 
   const handleSettlePayment = (payment) => {
+    const actionText = payment.paymentType === 'income' ? 'receiving' : 'settling';
     const description = prompt(
-      `Enter transaction description for settling "${payment.title}":`,
-      `${payment.title} - Monthly payment`
+      `Enter transaction description for ${actionText} "${payment.title}":`,
+      `${payment.title}${payment.paymentType === 'income' ? ' - Income received' : ' - Monthly payment'}`
     );
     
     if (description !== null) {
@@ -125,7 +126,7 @@ const PaymentNotificationModal = ({ isOpen, onClose, notifications, onSettlePaym
                         onClick={() => handleSettlePayment(notification)}
                         className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
                       >
-                        Settle Payment
+                        {notification.paymentType === 'income' ? 'Mark as Received' : 'Settle Payment'}
                       </button>
                     </div>
                   )}
