@@ -5,6 +5,7 @@ import { connectDB } from "./config/database.js";
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
+import transactionHistoryRoutes from "./routes/transactionHistoryRoutes.js";
 import budgetRoutes from "./routes/budgetRoutes.js";
 import plannedPaymentRoutes from "./routes/plannedPaymentRoutes.js";
 import retirementRoutes from "./routes/retirementRoutes.js";
@@ -21,6 +22,7 @@ app.use(express.json()); //Allowing the server to accept JSON data in req.body
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/transaction-history", transactionHistoryRoutes);
 app.use("/api/budgets", budgetRoutes);
 app.use("/api/planned-payments", plannedPaymentRoutes);
 app.use("/api/retirement", retirementRoutes);

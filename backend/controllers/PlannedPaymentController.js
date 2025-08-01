@@ -8,6 +8,7 @@ import {
     getNextMonthDueDate 
 } from "../utils/dateUtils.js";
 import { validatePlannedPaymentCreation, validateBalanceForExpenseSettlement } from "../utils/plannedPaymentValidation.js";
+import TransactionHistoryController from "./TransactionHistoryController.js";
 
 class PlannedPaymentController {
     // Create planned payment
@@ -114,6 +115,34 @@ class PlannedPaymentController {
                     category: category.trim()
                 });
                 await initialTransaction.save();
+
+                // Create history entry for auto-settlement
+                const action = paymentType === 'income' ? 'RECEIVE_PLANNED_PAYMENT' : 'SETTLE_PLANNED_PAYMENT';
+                await TransactionHistoryController.createEntry({
+                    user: userId,
+                    action: action,
+                    transactionId: initialTransaction._id,
+                    plannedPaymentId: newPlannedPayment._id,
+                    newData: {
+                        type: initialTransaction.type,
+                        amount: initialTransaction.amount,
+                        description: initialTransaction.description,
+                        category: initialTransaction.category,
+                        createdAt: initialTransaction.createdAt
+                    },
+                    plannedPaymentData: {
+                        title: newPlannedPayment.title,
+                        description: newPlannedPayment.description,
+                        amount: newPlannedPayment.amount,
+                        category: newPlannedPayment.category,
+                        paymentType: newPlannedPayment.paymentType,
+                        dueDay: newPlannedPayment.dueDay
+                    },
+                    description: `Auto-${paymentType === 'income' ? 'received' : 'settled'} planned payment "${title.trim()}" (Past Due Date)`,
+                    metadata: {
+                        source: 'PLANNED_PAYMENT'
+                    }
+                });
             }
             
             // Populate user info for response
@@ -404,6 +433,34 @@ class PlannedPaymentController {
             });
 
             await transaction.save();
+
+            // Create history entry for planned payment settlement
+            const action = plannedPayment.paymentType === 'income' ? 'RECEIVE_PLANNED_PAYMENT' : 'SETTLE_PLANNED_PAYMENT';
+            await TransactionHistoryController.createEntry({
+                user: userId,
+                action: action,
+                transactionId: transaction._id,
+                plannedPaymentId: plannedPayment._id,
+                newData: {
+                    type: transaction.type,
+                    amount: transaction.amount,
+                    description: transaction.description,
+                    category: transaction.category,
+                    createdAt: transaction.createdAt
+                },
+                plannedPaymentData: {
+                    title: plannedPayment.title,
+                    description: plannedPayment.description,
+                    amount: plannedPayment.amount,
+                    category: plannedPayment.category,
+                    paymentType: plannedPayment.paymentType,
+                    dueDay: plannedPayment.dueDay
+                },
+                description: `${plannedPayment.paymentType === 'income' ? 'Received' : 'Settled'} planned payment "${plannedPayment.title}"`,
+                metadata: {
+                    source: 'PLANNED_PAYMENT'
+                }
+            });
 
             // Update planned payment with settlement date
             plannedPayment.lastSettledDate = new Date();

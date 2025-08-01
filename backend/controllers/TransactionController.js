@@ -2,6 +2,7 @@ import Transaction from "../models/Transaction.js";
 import Budget from "../models/Budget.js";
 import mongoose from "mongoose";
 import { validateExpenseTransactionCreation } from "../utils/plannedPaymentValidation.js";
+import TransactionHistoryController from "./TransactionHistoryController.js";
 
 class TransactionController {
     // Get categories for transaction types
@@ -153,6 +154,24 @@ class TransactionController {
             });
             
             await newTransaction.save();
+            
+            // Create history entry for transaction creation
+            await TransactionHistoryController.createEntry({
+                user: userId,
+                action: 'CREATE',
+                transactionId: newTransaction._id,
+                newData: {
+                    type: newTransaction.type,
+                    amount: newTransaction.amount,
+                    description: newTransaction.description,
+                    category: newTransaction.category,
+                    createdAt: newTransaction.createdAt
+                },
+                description: `Added new ${newTransaction.type} transaction: ${newTransaction.category} - ${newTransaction.description || 'No description'}`,
+                metadata: {
+                    source: 'MANUAL'
+                }
+            });
             
             // Populate user info for response
             await newTransaction.populate('user', 'name email');
@@ -319,6 +338,15 @@ class TransactionController {
                 });
             }
 
+            // Store original data for history tracking
+            const originalData = {
+                type: transaction.type,
+                amount: transaction.amount,
+                description: transaction.description,
+                category: transaction.category,
+                createdAt: transaction.createdAt
+            };
+
             // Validate category if provided and using predefined categories only
             const transactionType = type || transaction.type;
             if (category) {
@@ -383,6 +411,28 @@ class TransactionController {
             if (category) transaction.category = category;
 
             await transaction.save();
+
+            // Create history entry for transaction update
+            const newData = {
+                type: transaction.type,
+                amount: transaction.amount,
+                description: transaction.description,
+                category: transaction.category,
+                createdAt: transaction.createdAt
+            };
+
+            await TransactionHistoryController.createEntry({
+                user: userId,
+                action: 'UPDATE',
+                transactionId: transaction._id,
+                previousData: originalData,
+                newData: newData,
+                description: `Modified ${transaction.type} transaction: ${transaction.category} - ${transaction.description || 'No description'}`,
+                metadata: {
+                    source: 'MANUAL'
+                }
+            });
+
             await transaction.populate('user', 'name email');
             
             res.status(200).json({ 
@@ -412,14 +462,38 @@ class TransactionController {
                 });
             }
 
-            // Find and delete transaction, ensuring it belongs to the user
-            const transaction = await Transaction.findOneAndDelete({ _id: id, user: userId });
+            // Find transaction first to get data for history
+            const transaction = await Transaction.findOne({ _id: id, user: userId });
             if (!transaction) {
                 return res.status(404).json({ 
                     success: false, 
                     message: "Transaction not found or not authorized" 
                 });
             }
+
+            // Store transaction data for history
+            const deletedData = {
+                type: transaction.type,
+                amount: transaction.amount,
+                description: transaction.description,
+                category: transaction.category,
+                createdAt: transaction.createdAt
+            };
+
+            // Delete the transaction
+            await Transaction.findOneAndDelete({ _id: id, user: userId });
+
+            // Create history entry for transaction deletion
+            await TransactionHistoryController.createEntry({
+                user: userId,
+                action: 'DELETE',
+                transactionId: null, // Transaction no longer exists
+                previousData: deletedData,
+                description: `Deleted ${deletedData.type} transaction: ${deletedData.category} - ${deletedData.description || 'No description'}`,
+                metadata: {
+                    source: 'MANUAL'
+                }
+            });
 
             res.status(200).json({ 
                 success: true, 

@@ -7,6 +7,7 @@ import IncomeValidationModal from './components/IncomeValidationModal';
 import OverduePaymentModal from './components/OverduePaymentModal';
 import InsufficientBalanceModal from './components/InsufficientBalanceModal';
 import BudgetExceedModal from './components/BudgetExceedModal';
+import TransactionHistoryModal from './components/TransactionHistoryModal';
 
 const API_URL = '/api/transactions';
 
@@ -196,6 +197,7 @@ function TransactionDashboard() {
   const [overdueModal, setOverdueModal] = useState({ isOpen: false, overduePayments: [] });
   const [insufficientBalanceModal, setInsufficientBalanceModal] = useState({ isOpen: false, message: '', details: null });
   const [budgetExceedModal, setBudgetExceedModal] = useState({ isOpen: false, budgetInfo: null });
+  const [historyModal, setHistoryModal] = useState({ isOpen: false });
   const { user } = useAuth();
 
   // Fetch categories
@@ -746,15 +748,29 @@ function TransactionDashboard() {
       {/* Transactions Table */}
       <div className="banking-card">
         <div className="p-6">
-          <div className="flex items-center mb-6">
-            <div className="h-10 w-10 bg-gradient-to-r from-accent-500 to-accent-600 rounded-xl flex items-center justify-center mr-4">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <div className="h-10 w-10 bg-gradient-to-r from-accent-500 to-accent-600 rounded-xl flex items-center justify-center mr-4">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-neutral-900">Transaction Records</h3>
+                <p className="text-neutral-600">{transactions.length} transaction{transactions.length !== 1 ? 's' : ''} found</p>
+              </div>
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-neutral-900">Transaction Records</h3>
-              <p className="text-neutral-600">{transactions.length} transaction{transactions.length !== 1 ? 's' : ''} found</p>
+              <button
+                onClick={() => setHistoryModal({ isOpen: true })}
+                className="btn-secondary flex items-center"
+                title="View transaction history"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Transaction History
+              </button>
             </div>
           </div>
           
@@ -883,6 +899,12 @@ function TransactionDashboard() {
         onClose={() => setBudgetExceedModal({ isOpen: false, budgetInfo: null })}
         onProceed={handleBudgetOverride}
         budgetInfo={budgetExceedModal.budgetInfo}
+      />
+
+      {/* Transaction History Modal */}
+      <TransactionHistoryModal
+        isOpen={historyModal.isOpen}
+        onClose={() => setHistoryModal({ isOpen: false })}
       />
     </div>
   );
