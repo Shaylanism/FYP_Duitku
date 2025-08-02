@@ -15,6 +15,7 @@ class RetirementPlanController {
                 monthlyContributionPrs,
                 monthlyContributionPrsPercentage,
                 monthlyEpfContributionRate,
+                employeeEpfContributionRate,
                 targetMonthlyIncomeInput,
                 preRetirementReturn = 4.0,
                 postRetirementReturn = 4.0,
@@ -62,6 +63,14 @@ class RetirementPlanController {
                 });
             }
 
+            // Validate employee EPF contribution rate (maximum 11%)
+            if (employeeEpfContributionRate !== undefined && (employeeEpfContributionRate < 0 || employeeEpfContributionRate > 11)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Employee EPF contribution rate must be between 0% and 11%"
+                });
+            }
+
             // Validate salary increment rate
             if (enableSalaryIncrements && (salaryIncrementRate < 0 || salaryIncrementRate > 20)) {
                 return res.status(400).json({
@@ -99,6 +108,7 @@ class RetirementPlanController {
                 monthlyContributionPrs: calculatedMonthlyContributionPrs,
                 monthlyContributionPrsPercentage: prsPercentage,
                 monthlyEpfContributionRate: monthlyEpfContributionRate || 23,
+                employeeEpfContributionRate: employeeEpfContributionRate || 11,
                 targetMonthlyIncomeInput: targetMonthlyIncomeInput || null,
                 preRetirementReturn,
                 postRetirementReturn,
@@ -121,6 +131,7 @@ class RetirementPlanController {
                 monthlyContributionPrs: calculatedMonthlyContributionPrs,
                 monthlyContributionPrsPercentage: prsPercentage,
                 monthlyEpfContributionRate: monthlyEpfContributionRate || 23,
+                employeeEpfContributionRate: employeeEpfContributionRate || 11,
                 targetMonthlyIncomeInput: targetMonthlyIncomeInput || null,
                 preRetirementReturn,
                 postRetirementReturn,
@@ -172,6 +183,7 @@ class RetirementPlanController {
         monthlyContributionPrs,
         monthlyContributionPrsPercentage,
         monthlyEpfContributionRate,
+        employeeEpfContributionRate,
         targetMonthlyIncomeInput,
         preRetirementReturn,
         postRetirementReturn,
@@ -181,6 +193,10 @@ class RetirementPlanController {
     }) {
         const yearsToRetirement = retirementAge - currentAge;
         const yearsInRetirement = lifeExpectancy - retirementAge;
+        
+        // Calculate employee EPF contribution and disposable salary
+        const monthlyEmployeeEpfContribution = currentSalary * (employeeEpfContributionRate / 100);
+        const disposableMonthlySalary = currentSalary - monthlyEmployeeEpfContribution - monthlyContributionPrs;
         
         // Calculates last drawn salary with the option of salary increments
         let lastDrawnSalary;
@@ -343,7 +359,9 @@ class RetirementPlanController {
             yearsInRetirement,
             lastDrawnSalary: Math.round(lastDrawnSalary * 100) / 100,
             targetMonthlyIncome: Math.round(targetMonthlyIncome * 100) / 100,
-            monthlyEpfContribution: Math.round(initialMonthlyEpfContribution * 100) / 100, // Initial monthly EPF contribution (current salary)
+            monthlyEpfContribution: Math.round(initialMonthlyEpfContribution * 100) / 100, // Total monthly EPF contribution (employee + employer)
+            monthlyEmployeeEpfContribution: Math.round(monthlyEmployeeEpfContribution * 100) / 100, // Employee EPF contribution only
+            disposableMonthlySalary: Math.round(disposableMonthlySalary * 100) / 100, // Salary after EPF and PRS deductions
             totalFundsNeeded: Math.round(totalFundsNeeded * 100) / 100,
             projectedEpfBalance: Math.round(projectedEpfBalance * 100) / 100,
             projectedPrsBalance: Math.round(projectedPrsBalance * 100) / 100,

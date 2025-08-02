@@ -197,39 +197,39 @@ class ChatbotController {
     generateFinancialPrompt(userMessage, financialContext) {
         const contextPrompt = financialContext ? `
 Current Financial Context:
-📊 MONTHLY OVERVIEW:
+MONTHLY OVERVIEW:
 - Income: RM${financialContext.monthlyIncome.toFixed(2)} (Last month: RM${financialContext.lastMonthIncome.toFixed(2)}, Change: ${financialContext.incomeChange.toFixed(1)}%)
 - Expenses: RM${financialContext.monthlyExpenses.toFixed(2)} (Last month: RM${financialContext.lastMonthExpenses.toFixed(2)}, Change: ${financialContext.expenseChange.toFixed(1)}%)
 - Net Income: RM${financialContext.netIncome.toFixed(2)}
 - 3-Month Avg Income: RM${financialContext.avg3MonthIncome.toFixed(2)}
 - 3-Month Avg Expenses: RM${financialContext.avg3MonthExpenses.toFixed(2)}
 
-💰 FINANCIAL HEALTH:
+FINANCIAL HEALTH:
 - Savings Rate: ${financialContext.savingsRate.toFixed(1)}%
 - Cash Flow: ${financialContext.hasPositiveCashFlow ? 'Positive' : 'Negative'}
 
-📈 SPENDING ANALYSIS:
+SPENDING ANALYSIS:
 - Top Expense Categories: ${financialContext.topExpenseCategories.map(([cat, amt]) => `${cat} (RM${amt.toFixed(2)})`).join(', ')}
 - Total Expense Categories: ${financialContext.totalExpenseCategories}
 
-🎯 BUDGET TRACKING:
+BUDGET TRACKING:
 - Total Budget: RM${financialContext.totalBudget.toFixed(2)}
 - Budget Spent: RM${financialContext.totalBudgetSpent.toFixed(2)}
 - Budget Remaining: RM${financialContext.budgetRemaining.toFixed(2)}
 - Budget Utilization: ${financialContext.budgetUtilizationRate.toFixed(1)}%
 - Over-Budget Categories: ${financialContext.overBudgetCategoriesCount}
 
-📅 PLANNED PAYMENTS:
+PLANNED PAYMENTS:
 - Overdue: ${financialContext.overduePaymentsCount} payments (Total: RM${financialContext.totalOverdueAmount.toFixed(2)})
 - Upcoming: ${financialContext.upcomingPaymentsCount} payments (Total: RM${financialContext.totalUpcomingAmount.toFixed(2)})
 
-🏦 RETIREMENT PLANNING:
+RETIREMENT PLANNING:
 - Has Plan: ${financialContext.hasRetirementPlan ? 'Yes' : 'No'}${financialContext.retirementPlanDetails ? `
 - Years to Retirement: ${financialContext.retirementPlanDetails.yearsToRetirement}
 - Monthly EPF Contribution: RM${financialContext.retirementPlanDetails.monthlyEpfContribution?.toFixed(2) || '0.00'}
 - Additional Monthly Savings Needed: RM${financialContext.retirementPlanDetails.additionalSavingsRequired?.toFixed(2) || '0.00'}` : ''}
 
-📋 DATA SUMMARY:
+DATA SUMMARY:
 - Recent Transactions: ${financialContext.recentTransactionsCount}
 - Active Budgets: ${financialContext.budgetsCount}
 - Planned Payments: ${financialContext.plannedPaymentsCount}
@@ -262,7 +262,8 @@ ANALYSIS GUIDELINES:
 - For retirement planning, provide specific guidance based on their current savings rate
 
 Keep responses detailed but well-structured. Always encourage responsible financial habits and data-driven decision making.
-If the user asks questions unrelated to finance, politely redirect them by saying you're a financial advisor specialized in helping with financial matters only.
+Always assume the currency of the user is MYR and time zone is Malaysia (MYT/UTC+8).
+Unless the user asks questions related to finance, only reply with "I am merely an AI assistant and I can only help with financial matters. Please ask me about your financial situation or anything related to finance."
 If you don't have their specific financial data, provide general advice and suggest they use the app's features to enable more personalized analysis.`;
     }
 

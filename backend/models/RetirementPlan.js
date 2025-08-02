@@ -62,6 +62,13 @@ const retirementPlanSchema = new mongoose.Schema({
         max: 30,
         default: 23 // Default Malaysian EPF rate (11% employee + 12% employer)
     },
+    employeeEpfContributionRate: {
+        type: Number,
+        required: false,
+        min: 0,
+        max: 11,
+        default: 11 // Default Malaysian employee EPF rate (maximum 11%)
+    },
     preRetirementReturn: {
         type: Number,
         required: true,
@@ -110,6 +117,12 @@ const retirementPlanSchema = new mongoose.Schema({
         type: Number
     },
     monthlyEpfContribution: {
+        type: Number
+    },
+    monthlyEmployeeEpfContribution: {
+        type: Number
+    },
+    disposableMonthlySalary: {
         type: Number
     },
     totalFundsNeeded: {
