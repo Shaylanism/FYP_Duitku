@@ -14,6 +14,15 @@ router.post("/chat", chatbotController.chat.bind(chatbotController));
 // Get conversation history
 router.get("/history", chatbotController.getConversationHistory.bind(chatbotController));
 
+// Clear all conversation history
+router.post("/clear", chatbotController.clearConversation.bind(chatbotController));
+
+// Start new chat (archive current conversation)
+router.post("/start-new", chatbotController.startNewChat.bind(chatbotController));
+
+// Get archived conversation (read-only)
+router.get("/archived", chatbotController.getArchivedConversation.bind(chatbotController));
+
 // Health check endpoint for debugging
 router.get("/health", (req, res) => {
     const hasApiKey = !!process.env.GEMINI_API_KEY;
