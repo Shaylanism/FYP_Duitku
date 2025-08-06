@@ -12,6 +12,7 @@ import budgetRoutes from "./routes/budgetRoutes.js";
 import plannedPaymentRoutes from "./routes/plannedPaymentRoutes.js";
 import retirementRoutes from "./routes/retirementRoutes.js";
 import chatbotRoutes from "./routes/chatbotRoutes.js";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 // Get current directory and configure dotenv to look in the root directory
 const __filename = fileURLToPath(import.meta.url);
@@ -33,6 +34,10 @@ app.use("/api/budgets", budgetRoutes);
 app.use("/api/planned-payments", plannedPaymentRoutes);
 app.use("/api/retirement", retirementRoutes);
 app.use("/api/chatbot", chatbotRoutes);
+
+// Error handling middleware (must be last)
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(5000, () => {
     connectDB();

@@ -1,8 +1,5 @@
 import mongoose from "mongoose";
-
-// Define predefined categories for each transaction type
-const INCOME_CATEGORIES = ['Salary', 'Others'];
-const EXPENSE_CATEGORIES = ['Car', 'Fuel', 'Food & Beverages', 'House', 'Utilities/Bills', 'Health', 'Transportation', 'Entertainment', 'Shopping', 'Insurance', 'Savings/Investments', 'Debt Payment', 'Others'];
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, getCategoriesByType } from '../constants/categories.js';
 
 const transactionSchema = new mongoose.Schema({
     user: {
@@ -35,19 +32,14 @@ const transactionSchema = new mongoose.Schema({
                 // Allow existing invalid categories to remain, just in case remove/add categories
                 // But validate new transactions against predefined categories
                 if (this.isNew) {
-                    if (this.type === 'income') {
-                        return INCOME_CATEGORIES.includes(value);
-                    } else if (this.type === 'expense') {
-                        return EXPENSE_CATEGORIES.includes(value);
-                    }
-                    return false;
+                    return getCategoriesByType(this.type).includes(value);
                 }
                 // For existing records, allow any category (backward compatibility)
                 return true;
             },
             message: function(props) {
                 const type = this.type;
-                const validCategories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+                const validCategories = getCategoriesByType(type);
                 return `Invalid category '${props.value}' for ${type} transaction. Valid categories are: ${validCategories.join(', ')}`;
             }
         }
@@ -69,7 +61,7 @@ transactionSchema.statics.getExpenseCategories = function() {
 };
 
 transactionSchema.statics.getCategoriesByType = function(type) {
-    return type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+    return getCategoriesByType(type);
 };
 
 const Transaction = mongoose.model("Transaction", transactionSchema);

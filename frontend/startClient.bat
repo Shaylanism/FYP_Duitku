@@ -1,4 +1,8 @@
 @echo off
-echo Starting React Development Server with Vite...
+cd /d "%~dp0"
+echo Starting Duitku Frontend (React with Vite)...
+echo.
 npm run dev
-pause
+echo.
+echo Frontend stopped. Press any key to exit...
+pause > nul
