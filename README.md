@@ -27,6 +27,7 @@ FYP_Duitku/
 │   │   ├── userRoutes.js      # User routes (thin)
 │   │   └── transactionRoutes.js # Transaction routes (thin)
 │   ├── server.js              # Express server setup
+│   ├── package.json           # Backend dependencies
 │   └── startServer.bat        # Windows start script
 ├── frontend/                   # 👁️ Views - React frontend
 │   ├── public/                # Static files
@@ -35,7 +36,7 @@ FYP_Duitku/
 │   │   ├── contexts/          # React context (state management)
 │   │   └── TransactionDashboard.js # Main transaction dashboard component
 │   └── package.json
-├── package.json               # Backend dependencies
+├── package.json               # Root project configuration
 └── README.md
 ```
 
@@ -74,7 +75,7 @@ FYP_Duitku/
 - **Responsive UI** (React frontend with modern styling)
 - **MVC Architecture** (Clean code organization)
 
-## 🛠️ Technologies Used
+## Technologies Used
 
 ### Backend
 - Node.js
@@ -97,17 +98,20 @@ FYP_Duitku/
 
 ### Backend Setup
 ```bash
+# Navigate to backend directory
+cd backend
+
 # Install backend dependencies
 npm install
 
-# Create .env file with:
+# Create .env file in root directory with:
 # MONGO_URI=your_mongodb_connection_string
 # JWT_SECRET=your_jwt_secret_key
 
 # Start backend server
 npm run dev
 # OR
-cd backend && startServer.bat
+startServer.bat
 ```
 
 ### Frontend Setup
