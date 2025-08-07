@@ -28,9 +28,9 @@ class TransactionController {
             }
 
             const transactionAmount = parseFloat(amount);
-            if (transactionAmount <= 0) {
+            if (transactionAmount < 0.05) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json(createErrorResponse(
-                "Amount must be greater than 0"
+                "Amount must be at least RM0.05"
             ));
         }
 

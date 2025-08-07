@@ -368,8 +368,8 @@ function TransactionDashboard() {
       return;
     }
 
-    if (parseFloat(form.amount) <= 0) {
-      setError('Amount must be greater than 0');
+    if (parseFloat(form.amount) < 0.05) {
+      setError('Amount must be at least RM0.05');
       setLoading(false);
       return;
     }
@@ -575,7 +575,7 @@ function TransactionDashboard() {
                       placeholder="0.00"
                       value={form.amount}
                       onChange={handleChange}
-                      min="0.01"
+                      min="0.05"
                       step="0.01"
                       required
                       className="banking-input pl-12"

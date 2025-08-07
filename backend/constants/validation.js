@@ -5,7 +5,7 @@
 
 export const VALIDATION_LIMITS = {
   TRANSACTION: {
-    MIN_AMOUNT: 0.01,
+    MIN_AMOUNT: 0.05,
     MAX_DESCRIPTION_LENGTH: 90
   },
   BUDGET: {
@@ -29,7 +29,7 @@ export const REGEX_PATTERNS = {
 
 export const ERROR_MESSAGES = {
   REQUIRED_FIELDS: (fields) => `${fields.join(', ')} are required`,
-  INVALID_AMOUNT: 'Amount must be greater than 0',
+  INVALID_AMOUNT: `Amount must be at least RM${VALIDATION_LIMITS.TRANSACTION.MIN_AMOUNT}`,
   INVALID_EMAIL: 'Please provide a valid email address',
   INVALID_MONTH_FORMAT: 'Month must be in YYYY-MM format',
   PASSWORD_TOO_SHORT: `Password must be at least ${VALIDATION_LIMITS.USER.MIN_PASSWORD_LENGTH} characters long`,
