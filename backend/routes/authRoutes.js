@@ -3,9 +3,9 @@ import AuthController from "../controllers/AuthController.js";
 
 const router = express.Router();
 
-// Auth routes - delegating to controller
-router.post("/register", (req, res) => AuthController.register(req, res));
-router.post("/login", (req, res) => AuthController.login(req, res));
-router.get("/verify", (req, res) => AuthController.verifyToken(req, res));
+// Auth routes - binding controller methods to maintain context
+router.post("/register", AuthController.register.bind(AuthController));
+router.post("/login", AuthController.login.bind(AuthController));
+router.get("/verify", AuthController.verifyToken.bind(AuthController));
 
 export default router; 

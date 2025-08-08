@@ -1,7 +1,7 @@
 /**
- * Custom hook for API calls
- * Provides loading states and error handling for API operations
- */
+ Custom hook for API calls
+ Provides loading states and error handling for API operations
+*/
 
 import { useState, useCallback } from 'react';
 
@@ -42,8 +42,8 @@ export const useApi = (apiFunction) => {
 };
 
 /**
- * Hook for form submissions with API calls
- */
+ Hook for form submissions with API calls
+*/
 export const useFormSubmit = (submitFunction) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);

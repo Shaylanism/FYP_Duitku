@@ -7,10 +7,10 @@ const router = express.Router();
 // Apply auth middleware to all routes
 router.use(authMiddleware);
 
-// User routes - delegating to controller
-router.post("/", (req, res) => UserController.createUser(req, res));
-router.get("/", (req, res) => UserController.getUsers(req, res));
-router.put("/:id", (req, res) => UserController.updateUser(req, res));
-router.delete("/:id", (req, res) => UserController.deleteUser(req, res));
+// User routes - directly using controller methods
+router.post("/", UserController.createUser);
+router.get("/", UserController.getUsers);
+router.put("/:id", UserController.updateUser);
+router.delete("/:id", UserController.deleteUser);
 
 export default router;

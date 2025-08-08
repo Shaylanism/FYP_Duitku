@@ -68,7 +68,9 @@ const Layout = () => {
   // Fetch notifications when component mounts (show modal for initial notifications)
   useEffect(() => {
     if (user && !notificationCheckDone) {
-      fetchNotifications(true);
+      fetchNotifications(true).catch(error => {
+        console.error('Failed to fetch initial notifications:', error);
+      });
     }
   }, [user, notificationCheckDone]);
 
@@ -76,7 +78,9 @@ const Layout = () => {
   useEffect(() => {
     if (user && notificationCheckDone) {
       const interval = setInterval(() => {
-        fetchNotifications(false); // Don't show modal on interval checks
+        fetchNotifications(false).catch(error => {
+          console.error('Failed to fetch periodic notifications:', error);
+        }); // Don't show modal on interval checks
       }, 5 * 60 * 1000); // 5 minutes
 
       return () => clearInterval(interval);
@@ -94,7 +98,9 @@ const Layout = () => {
     };
 
     const handlePaymentSettled = () => {
-      fetchNotifications(false); // Don't show modal when payment is settled
+      fetchNotifications(false).catch(error => {
+        console.error('Failed to fetch notifications after payment settled:', error);
+      }); // Don't show modal when payment is settled
     };
 
     window.addEventListener('userLoggedOut', handleLogoutEvent);
@@ -111,7 +117,9 @@ const Layout = () => {
     if (user && location.pathname === '/dashboard/planned-payments' && notificationCheckDone) {
       // Small delay to ensure the page has loaded
       const timer = setTimeout(() => {
-        fetchNotifications(false); // Don't show modal on navigation
+        fetchNotifications(false).catch(error => {
+          console.error('Failed to fetch notifications on navigation:', error);
+        }); // Don't show modal on navigation
       }, 1000);
       
       return () => clearTimeout(timer);

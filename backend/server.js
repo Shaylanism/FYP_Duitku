@@ -39,6 +39,29 @@ app.use("/api/chatbot", chatbotRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Global promise rejection and exception handlers
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Promise Rejection:', reason);
+    console.error('   Promise:', promise);
+    
+    // Log stack trace if available
+    if (reason && reason.stack) {
+        console.error('   Stack:', reason.stack);
+    }
+    
+    // Gracefully close server instead of immediate process exit
+    console.log('🔄 Server will continue running, but consider fixing this issue...');
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    console.error('   Stack:', error.stack);
+    
+    // For uncaught exceptions, we should exit gracefully
+    console.log('🛑 Shutting down server due to uncaught exception...');
+    process.exit(1);
+});
+
 app.listen(5000, () => {
     connectDB();
     console.log("Server is now running on http://localhost:5000");

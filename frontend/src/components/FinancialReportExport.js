@@ -82,6 +82,9 @@ const FinancialReportExport = () => {
         if (!loaded) {
           setError('Failed to load PDF libraries with alternative method. Please try the standard method.');
         }
+      }).catch(error => {
+        console.error('Failed to load dynamic PDF libraries:', error);
+        setError('Failed to load PDF libraries. Please try the standard method.');
       });
     }
   }, [useAlternativeMethod, dynamicLibrariesLoaded]);

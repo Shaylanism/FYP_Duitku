@@ -110,7 +110,10 @@ const AIChatbot = () => {
   // Load conversation history on component mount
   useEffect(() => {
     if (user) {
-      loadConversationHistory();
+      loadConversationHistory().catch(error => {
+        console.error('Failed to load conversation history:', error);
+        setError('Failed to load conversation history.');
+      });
     }
   }, [user]);
 

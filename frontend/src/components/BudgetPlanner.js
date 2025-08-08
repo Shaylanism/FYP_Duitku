@@ -107,13 +107,35 @@ function BudgetPlanner() {
   };
 
   useEffect(() => {
-    fetchCategories();
-    fetchAvailableMonths();
+    const initializeData = async () => {
+      try {
+        await Promise.all([
+          fetchCategories(),
+          fetchAvailableMonths()
+        ]);
+      } catch (error) {
+        console.error('Failed to initialize budget planner data:', error);
+        setError('Failed to load initial data. Please refresh the page.');
+      }
+    };
+
+    initializeData();
   }, []);
 
   useEffect(() => {
-    fetchBudgets();
-    fetchTransactionSummary();
+    const loadMonthData = async () => {
+      try {
+        await Promise.all([
+          fetchBudgets(),
+          fetchTransactionSummary()
+        ]);
+      } catch (error) {
+        console.error('Failed to load month data:', error);
+        // Individual functions already handle their own errors, so we just log here
+      }
+    };
+
+    loadMonthData();
   }, [selectedMonth]);
 
   // Handle form input
@@ -294,7 +316,9 @@ function BudgetPlanner() {
       
       // Refresh budgets and available months
       fetchBudgets();
-      fetchAvailableMonths();
+      fetchAvailableMonths().catch(err => {
+        console.error('Failed to refresh available months:', err);
+      });
       setError('');
       
       // Switch to current month to show copied budgets

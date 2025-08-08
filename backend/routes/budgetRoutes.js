@@ -7,15 +7,15 @@ const router = express.Router();
 // Apply auth middleware to all routes
 router.use(authMiddleware);
 
-// Budget routes - delegating to controller
-router.post("/", (req, res) => BudgetController.createBudget(req, res));
-router.post("/copy", (req, res) => BudgetController.copyBudgets(req, res));
-router.get("/", (req, res) => BudgetController.getBudgets(req, res));
-router.get("/with-spending", (req, res) => BudgetController.getBudgetsWithSpending(req, res));
-router.get("/check-impact", (req, res) => BudgetController.checkTransactionImpact(req, res));
-router.get("/check-exceedance", (req, res) => BudgetController.checkBudgetExceedance(req, res));
-router.get("/:id", (req, res) => BudgetController.getBudgetById(req, res));
-router.put("/:id", (req, res) => BudgetController.updateBudget(req, res));
-router.delete("/:id", (req, res) => BudgetController.deleteBudget(req, res));
+// Budget routes - directly using controller methods
+router.post("/", BudgetController.createBudget);
+router.post("/copy", BudgetController.copyBudgets);
+router.get("/", BudgetController.getBudgets);
+router.get("/with-spending", BudgetController.getBudgetsWithSpending);
+router.get("/check-impact", BudgetController.checkTransactionImpact);
+router.get("/check-exceedance", BudgetController.checkBudgetExceedance);
+router.get("/:id", BudgetController.getBudgetById);
+router.put("/:id", BudgetController.updateBudget);
+router.delete("/:id", BudgetController.deleteBudget);
 
 export default router; 

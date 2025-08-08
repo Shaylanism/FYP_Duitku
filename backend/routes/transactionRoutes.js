@@ -7,13 +7,13 @@ const router = express.Router();
 // Apply auth middleware to all routes
 router.use(authMiddleware);
 
-// Transaction routes - delegating to controller
-router.get("/categories", (req, res) => TransactionController.getCategories(req, res));
-router.get("/check-budget", (req, res) => TransactionController.checkBudgetForTransaction(req, res));
-router.post("/", (req, res) => TransactionController.createTransaction(req, res));
-router.get("/", (req, res) => TransactionController.getTransactions(req, res));
-router.get("/:id", (req, res) => TransactionController.getTransactionById(req, res));
-router.put("/:id", (req, res) => TransactionController.updateTransaction(req, res));
-router.delete("/:id", (req, res) => TransactionController.deleteTransaction(req, res));
+// Transaction routes - directly using controller methods
+router.get("/categories", TransactionController.getCategories);
+router.get("/check-budget", TransactionController.checkBudgetForTransaction);
+router.post("/", TransactionController.createTransaction);
+router.get("/", TransactionController.getTransactions);
+router.get("/:id", TransactionController.getTransactionById);
+router.put("/:id", TransactionController.updateTransaction);
+router.delete("/:id", TransactionController.deleteTransaction);
 
 export default router; 

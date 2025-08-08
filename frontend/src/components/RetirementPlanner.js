@@ -113,7 +113,10 @@ function RetirementPlanner() {
   };
 
   useEffect(() => {
-    fetchExistingPlan();
+    fetchExistingPlan().catch(error => {
+      console.error('Failed to fetch existing retirement plan:', error);
+      setError('Failed to load existing plan data.');
+    });
   }, []);
 
   const handleChange = (e) => {

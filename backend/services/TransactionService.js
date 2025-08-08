@@ -32,31 +32,28 @@ export class TransactionService {
       // Check for overdue expense planned payments first
       const overdueValidation = await validateExpenseTransactionCreation(userId);
       if (!overdueValidation.isValid) {
-        throw {
-          type: ERROR_TYPES.OVERDUE_PLANNED_PAYMENTS,
-          message: overdueValidation.message,
-          overduePayments: overdueValidation.overduePayments
-        };
+        const error = new Error(overdueValidation.message);
+        error.type = ERROR_TYPES.OVERDUE_PLANNED_PAYMENTS;
+        error.overduePayments = overdueValidation.overduePayments;
+        throw error;
       }
 
       const incomeValidation = await this.validateIncomeForExpense(userId, parseFloat(amount));
       if (!incomeValidation.isValid) {
-        throw {
-          type: incomeValidation.errorType,
-          message: incomeValidation.message,
-          details: incomeValidation.details
-        };
+        const error = new Error(incomeValidation.message);
+        error.type = incomeValidation.errorType;
+        error.details = incomeValidation.details;
+        throw error;
       }
 
       // Check budget exceedance for expense transactions
       if (!forceBudgetOverride) {
         const budgetCheck = await this.checkBudgetExceedance(userId, category, parseFloat(amount));
         if (budgetCheck.hasExceedance) {
-          throw {
-            type: ERROR_TYPES.BUDGET_EXCEEDED,
-            message: "This transaction will exceed your budget",
-            budgetInfo: budgetCheck.budgetInfo
-          };
+          const error = new Error("This transaction will exceed your budget");
+          error.type = ERROR_TYPES.BUDGET_EXCEEDED;
+          error.budgetInfo = budgetCheck.budgetInfo;
+          throw error;
         }
       }
     }
@@ -223,10 +220,9 @@ export class TransactionService {
     // Find transaction and ensure it belongs to the user
     const transaction = await Transaction.findOne({ _id: transactionId, user: userId });
     if (!transaction) {
-      throw {
-        type: ERROR_TYPES.NOT_FOUND,
-        message: "Transaction not found or not authorized"
-      };
+      const error = new Error("Transaction not found or not authorized");
+      error.type = ERROR_TYPES.NOT_FOUND;
+      throw error;
     }
 
     // Store original data for history tracking
@@ -246,11 +242,10 @@ export class TransactionService {
       // Check for overdue expense planned payments first
       const overdueValidation = await validateExpenseTransactionCreation(userId);
       if (!overdueValidation.isValid) {
-        throw {
-          type: ERROR_TYPES.OVERDUE_PLANNED_PAYMENTS,
-          message: overdueValidation.message,
-          overduePayments: overdueValidation.overduePayments
-        };
+        const error = new Error(overdueValidation.message);
+        error.type = ERROR_TYPES.OVERDUE_PLANNED_PAYMENTS;
+        error.overduePayments = overdueValidation.overduePayments;
+        throw error;
       }
 
       // Calculate the amount difference for validation
@@ -261,11 +256,10 @@ export class TransactionService {
       if (amountDifference > 0) {
         const incomeValidation = await this.validateIncomeForExpense(userId, amountDifference, transaction._id);
         if (!incomeValidation.isValid) {
-          throw {
-            type: incomeValidation.errorType,
-            message: incomeValidation.message,
-            details: incomeValidation.details
-          };
+          const error = new Error(incomeValidation.message);
+          error.type = incomeValidation.errorType;
+          error.details = incomeValidation.details;
+          throw error;
         }
       }
 
@@ -273,11 +267,10 @@ export class TransactionService {
       if (!forceBudgetOverride) {
         const budgetCheck = await this.checkBudgetExceedance(userId, finalCategory, finalAmount, transaction._id);
         if (budgetCheck.hasExceedance) {
-          throw {
-            type: ERROR_TYPES.BUDGET_EXCEEDED,
-            message: "This transaction update will exceed your budget",
-            budgetInfo: budgetCheck.budgetInfo
-          };
+          const error = new Error("This transaction update will exceed your budget");
+          error.type = ERROR_TYPES.BUDGET_EXCEEDED;
+          error.budgetInfo = budgetCheck.budgetInfo;
+          throw error;
         }
       }
     }
@@ -323,10 +316,9 @@ export class TransactionService {
     // Find transaction first to get data for history
     const transaction = await Transaction.findOne({ _id: transactionId, user: userId });
     if (!transaction) {
-      throw {
-        type: ERROR_TYPES.NOT_FOUND,
-        message: "Transaction not found or not authorized"
-      };
+      const error = new Error("Transaction not found or not authorized");
+      error.type = ERROR_TYPES.NOT_FOUND;
+      throw error;
     }
 
     // Store transaction data for history
@@ -364,10 +356,9 @@ export class TransactionService {
       .populate('user', 'name email');
 
     if (!transaction) {
-      throw {
-        type: ERROR_TYPES.NOT_FOUND,
-        message: "Transaction not found or not authorized"
-      };
+      const error = new Error("Transaction not found or not authorized");
+      error.type = ERROR_TYPES.NOT_FOUND;
+      throw error;
     }
 
     return transaction;

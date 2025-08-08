@@ -237,14 +237,27 @@ function TransactionDashboard() {
   };
 
   useEffect(() => {
-    fetchCategories();
-    fetchTransactions();
+    const initializeData = async () => {
+      try {
+        await Promise.all([
+          fetchCategories(),
+          fetchTransactions()
+        ]);
+      } catch (error) {
+        console.error('Failed to initialize transaction dashboard data:', error);
+        setError('Failed to load initial data. Please refresh the page.');
+      }
+    };
+
+    initializeData();
   }, []);
 
   // Handle month change
   const handleMonthChange = (newMonth) => {
     setSelectedMonth(newMonth);
-    fetchTransactions(newMonth, filterType, filterCategory);
+    fetchTransactions(newMonth, filterType, filterCategory).catch(error => {
+      console.error('Failed to fetch transactions for month change:', error);
+    });
     
     // Cancel editing when switching months to prevent confusion
     if (editing) {
@@ -263,7 +276,9 @@ function TransactionDashboard() {
   const handleFilterChange = (newType, newCategory) => {
     setFilterType(newType);
     setFilterCategory(newCategory);
-    fetchTransactions(selectedMonth, newType, newCategory);
+    fetchTransactions(selectedMonth, newType, newCategory).catch(error => {
+      console.error('Failed to fetch transactions for filter change:', error);
+    });
   };
 
   // Handle form input
@@ -312,7 +327,9 @@ function TransactionDashboard() {
         id: null 
       });
       setEditing(false);
-      fetchTransactions(selectedMonth, filterType, filterCategory);
+      fetchTransactions(selectedMonth, filterType, filterCategory).catch(error => {
+        console.error('Failed to refresh transactions after submit:', error);
+      });
       setError('');
       
       // Close any open modals
@@ -412,7 +429,9 @@ function TransactionDashboard() {
     setLoading(true);
     try {
       await axios.delete(`${API_URL}/${id}`);
-      fetchTransactions(selectedMonth, filterType, filterCategory);
+      fetchTransactions(selectedMonth, filterType, filterCategory).catch(error => {
+        console.error('Failed to refresh transactions after delete:', error);
+      });
       setError('');
     } catch (err) {
       setError('Failed to delete transaction');
@@ -731,7 +750,9 @@ function TransactionDashboard() {
                 onClick={() => {
                   setFilterType('');
                   setFilterCategory('');
-                  fetchTransactions(selectedMonth, '', '');
+                  fetchTransactions(selectedMonth, '', '').catch(error => {
+                    console.error('Failed to fetch transactions for clear filters:', error);
+                  });
                 }}
                 className="btn-ghost w-full"
               >

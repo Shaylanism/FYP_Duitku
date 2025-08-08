@@ -26,7 +26,10 @@ function UserManagement() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers().catch(error => {
+      console.error('Failed to fetch users:', error);
+      setError('Failed to load users. Please refresh the page.');
+    });
   }, []);
 
   // Handle form input
@@ -46,7 +49,9 @@ function UserManagement() {
       }
       setForm({ name: '', email: '', id: null });
       setEditing(false);
-      fetchUsers();
+      fetchUsers().catch(error => {
+        console.error('Failed to refresh users after save:', error);
+      });
       setError('');
     } catch (err) {
       setError('Failed to save user');
@@ -65,7 +70,9 @@ function UserManagement() {
     setLoading(true);
     try {
       await axios.delete(`${API_URL}/${id}`);
-      fetchUsers();
+      fetchUsers().catch(error => {
+        console.error('Failed to refresh users after delete:', error);
+      });
       setError('');
     } catch (err) {
       setError('Failed to delete user');

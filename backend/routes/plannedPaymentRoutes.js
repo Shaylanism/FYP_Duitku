@@ -7,14 +7,14 @@ const router = express.Router();
 // Apply auth middleware to all routes
 router.use(authMiddleware);
 
-// Planned payment routes - delegating to controller
-router.post("/", (req, res) => PlannedPaymentController.createPlannedPayment(req, res));
-router.get("/", (req, res) => PlannedPaymentController.getPlannedPayments(req, res));
-router.get("/notifications", (req, res) => PlannedPaymentController.getNotifications(req, res));
-router.get("/reminders", (req, res) => PlannedPaymentController.getPaymentsDueForReminders(req, res));
-router.get("/:id", (req, res) => PlannedPaymentController.getPlannedPaymentById(req, res));
-router.put("/:id", (req, res) => PlannedPaymentController.updatePlannedPayment(req, res));
-router.put("/:id/settle", (req, res) => PlannedPaymentController.markAsSettled(req, res));
-router.delete("/:id", (req, res) => PlannedPaymentController.deletePlannedPayment(req, res));
+// Planned payment routes - directly using controller methods
+router.post("/", PlannedPaymentController.createPlannedPayment);
+router.get("/", PlannedPaymentController.getPlannedPayments);
+router.get("/notifications", PlannedPaymentController.getNotifications);
+router.get("/reminders", PlannedPaymentController.getPaymentsDueForReminders);
+router.get("/:id", PlannedPaymentController.getPlannedPaymentById);
+router.put("/:id", PlannedPaymentController.updatePlannedPayment);
+router.put("/:id/settle", PlannedPaymentController.markAsSettled);
+router.delete("/:id", PlannedPaymentController.deletePlannedPayment);
 
 export default router; 
