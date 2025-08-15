@@ -14,7 +14,7 @@ class UserController {
                 });
             }
 
-            // Check if user already exists
+            // Checks if user already exists
             const existingUser = await User.findOne({ email });
             if (existingUser) {
                 return res.status(400).json({ 
@@ -23,12 +23,12 @@ class UserController {
                 });
             }
 
-            // Create user with default password (they should change it)
+            //Creates a user with default password (they should change it)
             const newUser = new User({ name, email, password: "temppassword123" });
             
             await newUser.save();
             
-            // Return user without password
+            // Returns user without password
             const userResponse = {
                 _id: newUser._id,
                 name: newUser.name,

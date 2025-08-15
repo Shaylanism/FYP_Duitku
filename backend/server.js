@@ -41,8 +41,8 @@ app.use(errorHandler);
 
 // Global promise rejection and exception handlers
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ Unhandled Promise Rejection:', reason);
-    console.error('   Promise:', promise);
+    console.error('Unhandled Promise Rejection:', reason);
+    console.error('Promise:', promise);
     
     // Log stack trace if available
     if (reason && reason.stack) {
@@ -54,11 +54,11 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 process.on('uncaughtException', (error) => {
-    console.error('❌ Uncaught Exception:', error);
-    console.error('   Stack:', error.stack);
+    console.error('Uncaught Exception:', error);
+    console.error('Stack:', error.stack);
     
     // For uncaught exceptions, we should exit gracefully
-    console.log('🛑 Shutting down server due to uncaught exception...');
+    console.log('Shutting down server due to uncaught exception...');
     process.exit(1);
 });
 
@@ -68,10 +68,10 @@ app.listen(5000, () => {
     
     // Debug environment variables for AI Chatbot
     if (process.env.GEMINI_API_KEY) {
-        console.log("✅ GEMINI_API_KEY loaded successfully");
+        console.log("GEMINI_API_KEY loaded successfully");
     } else {
-        console.warn("⚠️  GEMINI_API_KEY not found in environment variables");
-        console.warn("   Please ensure you have a .env file in the root directory with GEMINI_API_KEY=your_api_key");
+        console.warn("GEMINI_API_KEY not found in environment variables");
+        console.warn("Please ensure you have a .env file in the root directory with GEMINI_API_KEY=your_api_key");
     }
 });
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatCurrency } from '../utils/formatters';
 
 const IncomeValidationModal = ({ 
   isOpen, 
@@ -8,13 +9,6 @@ const IncomeValidationModal = ({
   details = null 
 }) => {
   if (!isOpen) return null;
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-MY', {
-      style: 'currency',
-      currency: 'MYR'
-    }).format(amount);
-  };
 
   const getModalContent = () => {
     switch (errorType) {
@@ -88,31 +82,37 @@ const IncomeValidationModal = ({
               <h4 className="font-semibold text-neutral-800 mb-3">Financial Summary</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-neutral-600">Total Income:</span>
+                  <span className="text-neutral-600">Monthly Income:</span>
                   <span className="font-medium text-success-600">
-                    {formatCurrency(details.totalIncome)}
+                    {formatCurrency(details.monthlyIncome || details.totalIncome || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-neutral-600">Current Expenses:</span>
+                  <span className="text-neutral-600">Monthly Expenses:</span>
                   <span className="font-medium text-error-600">
-                    {formatCurrency(details.totalExpenses)}
+                    {formatCurrency(details.monthlyExpenses || details.totalExpenses || 0)}
                   </span>
                 </div>
                 <div className="border-t border-neutral-200 pt-2 mt-2">
                   <div className="flex justify-between">
                     <span className="text-neutral-600">Available to Spend:</span>
                     <span className="font-bold text-primary-600">
-                      {formatCurrency(details.availableAmount)}
+                      {formatCurrency(details.availableBalance || details.availableAmount || 0)}
                     </span>
                   </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-600">Requested Amount:</span>
                   <span className="font-medium text-warning-600">
-                    {formatCurrency(details.requestedAmount)}
+                    {formatCurrency(details.requestedAmount || 0)}
                   </span>
                 </div>
+                {details.month && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Month:</span>
+                    <span className="font-medium text-neutral-800">{details.month}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

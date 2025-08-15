@@ -7,6 +7,7 @@ import {
   formatMonthDisplay,
   getAvailableMonthsFromItems 
 } from '../utils/monthUtils';
+import { formatCurrency } from '../utils/formatters';
 import MonthFilter from './MonthFilter';
 import BudgetWarningModal from './BudgetWarningModal';
 
@@ -329,12 +330,7 @@ function BudgetPlanner() {
     setCopyLoading(false);
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-MY', {
-      style: 'currency',
-      currency: 'MYR'
-    }).format(amount || 0);
-  };
+
 
   const getSpentAmount = (category) => {
     return transactionSummary[category] || 0;

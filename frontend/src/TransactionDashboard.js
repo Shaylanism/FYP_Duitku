@@ -353,7 +353,7 @@ function TransactionDashboard() {
           isOpen: true,
           overduePayments: errorData.overduePayments || []
         });
-      } else if (errorData?.errorType === 'INSUFFICIENT_BALANCE') {
+      } else if (errorData?.errorType === 'INSUFFICIENT_BALANCE' || errorData?.errorType === 'INSUFFICIENT_MONTHLY_BALANCE') {
         // Handle insufficient balance error with modal
         setInsufficientBalanceModal({
           isOpen: true,

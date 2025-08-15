@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { getCurrentMonth } from '../utils/monthUtils';
+import { formatCurrency } from '../utils/formatters';
 import { PDF_CONSTANTS, LAYOUT, TABLE_STYLES, COLORS, FONTS, createTableConfig, addFooter } from '../utils/pdfUtils';
 import MonthFilter from './MonthFilter';
 import { jsPDF } from 'jspdf';
@@ -208,12 +209,7 @@ const FinancialReportExport = () => {
     setSelectedMonth(newMonth);
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'MYR'
-    }).format(amount);
-  };
+
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -236,10 +232,6 @@ const FinancialReportExport = () => {
       default: return 'th';
     }
   };
-
-
-
-
 
   const generatePDF = async () => {
     if (!previewData) {

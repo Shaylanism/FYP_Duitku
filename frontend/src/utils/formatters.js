@@ -7,10 +7,12 @@
  * Format currency for display
  */
 export const formatCurrency = (amount, currency = 'MYR') => {
+  // Handle undefined, null, or NaN values
+  const numericAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
   return new Intl.NumberFormat('en-MY', {
     style: 'currency',
     currency
-  }).format(amount);
+  }).format(numericAmount);
 };
 
 /**

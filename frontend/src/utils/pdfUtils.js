@@ -130,7 +130,7 @@ export const ensurePageSpace = (doc, currentY, requiredSpace = 30) => {
 };
 
 /**
- * Add professional footer to a PDF page
+ * Adds a professional footer to the PDF page
  * @param {Object} doc - jsPDF document object
  * @param {number} pageNumber - Current page number
  * @param {number} totalPages - Total number of pages

@@ -1,14 +1,8 @@
 import React from 'react';
+import { formatCurrency } from '../utils/formatters';
 
 const InsufficientBalanceModal = ({ isOpen, onClose, details, message }) => {
   if (!isOpen) return null;
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-MY', {
-      style: 'currency',
-      currency: 'MYR'
-    }).format(amount);
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -38,24 +32,30 @@ const InsufficientBalanceModal = ({ isOpen, onClose, details, message }) => {
 
           {details && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-              <h4 className="font-medium text-orange-900 mb-3">Balance Summary:</h4>
+              <h4 className="font-medium text-orange-900 mb-3">Monthly Balance Summary:</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-orange-700">Total Income:</span>
-                  <span className="font-medium text-green-700">{formatCurrency(details.totalIncome)}</span>
+                  <span className="text-orange-700">Monthly Income:</span>
+                  <span className="font-medium text-green-700">{formatCurrency(details.monthlyIncome || details.totalIncome || 0)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-orange-700">Total Expenses:</span>
-                  <span className="font-medium text-red-700">{formatCurrency(details.totalExpenses)}</span>
+                  <span className="text-orange-700">Monthly Expenses:</span>
+                  <span className="font-medium text-red-700">{formatCurrency(details.monthlyExpenses || details.totalExpenses || 0)}</span>
                 </div>
                 <div className="flex justify-between border-t border-orange-300 pt-2">
                   <span className="text-orange-800 font-medium">Available Balance:</span>
-                  <span className="font-bold text-orange-900">{formatCurrency(details.currentBalance)}</span>
+                  <span className="font-bold text-orange-900">{formatCurrency(details.availableBalance || details.currentBalance || 0)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-orange-700">Required Amount:</span>
-                  <span className="font-medium text-orange-800">{formatCurrency(details.requiredAmount)}</span>
+                  <span className="text-orange-700">Requested Amount:</span>
+                  <span className="font-medium text-orange-800">{formatCurrency(details.requestedAmount || details.requiredAmount || 0)}</span>
                 </div>
+                {details.month && (
+                  <div className="flex justify-between">
+                    <span className="text-orange-700">Month:</span>
+                    <span className="font-medium text-orange-800">{details.month}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

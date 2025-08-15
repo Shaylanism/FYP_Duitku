@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { formatCurrency } from '../utils/formatters';
 
 const API_URL = '/api/retirement';
 
@@ -208,15 +209,6 @@ function RetirementPlanner() {
     } catch (err) {
       alert('Failed to delete retirement plan');
     }
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-MY', {
-      style: 'currency',
-      currency: 'MYR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
   };
 
   // Calculate real-time PRS contribution amount from percentage

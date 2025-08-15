@@ -38,11 +38,11 @@ export class TransactionService {
         throw error;
       }
 
-      const incomeValidation = await this.validateIncomeForExpense(userId, parseFloat(amount));
-      if (!incomeValidation.isValid) {
-        const error = new Error(incomeValidation.message);
-        error.type = incomeValidation.errorType;
-        error.details = incomeValidation.details;
+      const monthlyBalanceValidation = await this.validateMonthlyBalanceForExpense(userId, parseFloat(amount));
+      if (!monthlyBalanceValidation.isValid) {
+        const error = new Error(monthlyBalanceValidation.message);
+        error.type = monthlyBalanceValidation.errorType;
+        error.details = monthlyBalanceValidation.details;
         throw error;
       }
 
@@ -254,11 +254,11 @@ export class TransactionService {
         : finalAmount;
       
       if (amountDifference > 0) {
-        const incomeValidation = await this.validateIncomeForExpense(userId, amountDifference, transaction._id);
-        if (!incomeValidation.isValid) {
-          const error = new Error(incomeValidation.message);
-          error.type = incomeValidation.errorType;
-          error.details = incomeValidation.details;
+        const monthlyBalanceValidation = await this.validateMonthlyBalanceForExpense(userId, amountDifference, transaction._id);
+        if (!monthlyBalanceValidation.isValid) {
+          const error = new Error(monthlyBalanceValidation.message);
+          error.type = monthlyBalanceValidation.errorType;
+          error.details = monthlyBalanceValidation.details;
           throw error;
         }
       }
@@ -441,65 +441,104 @@ export class TransactionService {
   }
 
   /**
-   * Helper method to validate income for expense transactions
+   * Helper method to validate monthly balance for expense transactions
    */
-  static async validateIncomeForExpense(userId, expenseAmount, excludeTransactionId = null) {
+  static async validateMonthlyBalanceForExpense(userId, expenseAmount, excludeTransactionId = null) {
     try {
-      // Get user's total income
-      const incomeQuery = { user: userId, type: TRANSACTION_TYPES.INCOME };
-      const totalIncomeResult = await Transaction.aggregate([
-        { $match: incomeQuery },
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+      
+      // Create date range for the current month
+      const startDate = new Date(`${currentMonth}-01T00:00:00.000Z`);
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + 1);
+
+      // Get current month's income
+      const monthlyIncomeQuery = { 
+        user: userId, 
+        type: TRANSACTION_TYPES.INCOME,
+        createdAt: {
+          $gte: startDate,
+          $lt: endDate
+        }
+      };
+      
+      const monthlyIncomeResult = await Transaction.aggregate([
+        { $match: monthlyIncomeQuery },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]);
-      const totalIncome = totalIncomeResult[0]?.total || 0;
+      const monthlyIncome = monthlyIncomeResult[0]?.total || 0;
 
-      // Check if user has any income
-      if (totalIncome === 0) {
+      // Check if user has any income for this month
+      if (monthlyIncome === 0) {
         return {
           isValid: false,
-          message: "You cannot add expenses without any recorded income. Please add an income transaction first.",
-          errorType: ERROR_TYPES.NO_INCOME
+          message: "You cannot add expenses without any income recorded for this month. Please add an income transaction first.",
+          errorType: ERROR_TYPES.NO_INCOME,
+          details: {
+            monthlyIncome: 0,
+            monthlyExpenses: 0,
+            availableBalance: 0,
+            requestedAmount: expenseAmount,
+            month: currentMonth
+          }
         };
       }
 
-      // Get user's total expenses (excluding the transaction being updated if any)
-      const expenseQuery = { user: userId, type: TRANSACTION_TYPES.EXPENSE };
+      // Get current month's expenses (excluding the transaction being updated if any)
+      const monthlyExpenseQuery = { 
+        user: userId, 
+        type: TRANSACTION_TYPES.EXPENSE,
+        createdAt: {
+          $gte: startDate,
+          $lt: endDate
+        }
+      };
+      
       if (excludeTransactionId) {
-        expenseQuery._id = { $ne: excludeTransactionId };
+        monthlyExpenseQuery._id = { $ne: excludeTransactionId };
       }
       
-      const totalExpenseResult = await Transaction.aggregate([
-        { $match: expenseQuery },
+      const monthlyExpenseResult = await Transaction.aggregate([
+        { $match: monthlyExpenseQuery },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]);
-      const totalExpenses = totalExpenseResult[0]?.total || 0;
+      const monthlyExpenses = monthlyExpenseResult[0]?.total || 0;
 
-      // Check if new expense would exceed income
-      const potentialTotalExpenses = totalExpenses + expenseAmount;
-      if (potentialTotalExpenses > totalIncome) {
-        const availableAmount = totalIncome - totalExpenses;
+      // Calculate available monthly balance
+      const availableMonthlyBalance = monthlyIncome - monthlyExpenses;
+      
+      // Check if new expense would exceed monthly balance
+      if (expenseAmount > availableMonthlyBalance) {
         return {
           isValid: false,
-          message: `Insufficient income. You have RM${availableAmount.toFixed(2)} available to spend, but you're trying to spend RM${expenseAmount.toFixed(2)}.`,
-          errorType: ERROR_TYPES.INSUFFICIENT_INCOME,
+          message: `Insufficient monthly balance. You have RM${availableMonthlyBalance.toFixed(2)} available this month, but you're trying to spend RM${expenseAmount.toFixed(2)}.`,
+          errorType: ERROR_TYPES.INSUFFICIENT_MONTHLY_BALANCE,
           details: {
-            totalIncome,
-            totalExpenses,
-            availableAmount,
-            requestedAmount: expenseAmount
+            monthlyIncome,
+            monthlyExpenses,
+            availableBalance: availableMonthlyBalance,
+            requestedAmount: expenseAmount,
+            month: currentMonth
           }
         };
       }
 
       return {
         isValid: true,
-        message: "Income validation passed"
+        message: "Monthly balance validation passed",
+        details: {
+          monthlyIncome,
+          monthlyExpenses,
+          availableBalance: availableMonthlyBalance,
+          requestedAmount: expenseAmount,
+          month: currentMonth
+        }
       };
     } catch (error) {
-      console.error("Error validating income:", error.message);
+      console.error("Error validating monthly balance:", error.message);
       return {
         isValid: false,
-        message: "Failed to validate income. Please try again.",
+        message: "Failed to validate monthly balance. Please try again.",
         errorType: ERROR_TYPES.VALIDATION_ERROR
       };
     }
