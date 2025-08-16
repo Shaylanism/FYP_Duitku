@@ -4,7 +4,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import { connectDB } from "./config/database.js";
-import userRoutes from "./routes/userRoutes.js";
+
 import authRoutes from "./routes/authRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
 import transactionHistoryRoutes from "./routes/transactionHistoryRoutes.js";
@@ -27,7 +27,7 @@ app.use(express.json()); //Allowing the server to accept JSON data in req.body
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
+
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/transaction-history", transactionHistoryRoutes);
 app.use("/api/budgets", budgetRoutes);

@@ -10,7 +10,6 @@ backend/
 │   └── database.js          # Database connection configuration
 ├── controllers/             # Controller layer - Business logic
 │   ├── AuthController.js    # Authentication business logic
-│   ├── UserController.js    # User management business logic
 │   ├── TransactionController.js # Transaction management business logic
 │   ├── BudgetController.js  # Budget planning business logic
 │   └── PlannedPaymentController.js # Planned payment management business logic
@@ -23,7 +22,6 @@ backend/
 │   └── PlannedPayment.js   # Planned payment data model with Mongoose schema
 ├── routes/                  # Route layer - API endpoints (thin routes)
 │   ├── authRoutes.js       # Authentication routes
-│   ├── userRoutes.js       # User management routes
 │   ├── transactionRoutes.js # Transaction management routes
 │   ├── budgetRoutes.js     # Budget planning routes
 │   └── plannedPaymentRoutes.js # Planned payment management routes
@@ -33,7 +31,7 @@ backend/
 
 ## MVC Architecture Breakdown
 
-### 📊 **Models** (`/models`)
+###**Models** (`/models`)
 - **Purpose**: Define data structure and database operations
 - **Responsibilities**:
   - Database schema definition
@@ -41,7 +39,7 @@ backend/
   - Database operations (save, find, update, delete)
   - Business logic related to data (e.g., password hashing)
 
-### 🎮 **Controllers** (`/controllers`)
+###**Controllers** (`/controllers`)
 - **Purpose**: Handle business logic and coordinate between models and routes
 - **Responsibilities**:
   - Process request data
@@ -50,7 +48,7 @@ backend/
   - Format responses
   - Handle errors
 
-### 🛣️ **Routes** (`/routes`)
+###**Routes** (`/routes`)
 - **Purpose**: Define API endpoints and delegate to controllers
 - **Responsibilities**:
   - Define HTTP routes (GET, POST, PUT, DELETE)
@@ -64,12 +62,6 @@ backend/
 - `POST /register` - User registration
 - `POST /login` - User login  
 - `GET /verify` - Token verification
-
-### User Management Routes (`/api/users`)
-- `GET /` - Get all users
-- `POST /` - Create new user (admin)
-- `PUT /:id` - Update user
-- `DELETE /:id` - Delete user
 
 ### Transaction Management Routes (`/api/transactions`)
 - `GET /` - Get user's transactions with summary (supports month filtering with ?month=YYYY-MM)

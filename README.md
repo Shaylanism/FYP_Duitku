@@ -1,35 +1,35 @@
-# FYP_Duitku - Personal Finance Tracker
+# FYP_Duitku - Web-based Financial Management Application
 
-A full-stack web application built with **MERN stack** following **MVC architectural pattern** for tracking personal income and expenses.
+A full-stack web application built following the **MERN stack** following **MVC architectural pattern** for tracking and managing personal income and expenses.
 
-## 🏗️ Architecture
+##Architecture
 
 This project follows the **Model-View-Controller (MVC)** architectural pattern for better code organization, maintainability, and scalability.
 
-## 📁 Project Structure
+##Project Structure
 
 ```
 FYP_Duitku/
 ├── backend/                    # Backend API (Node.js + Express)
 │   ├── config/                 # Configuration files
 │   │   └── database.js         # MongoDB connection
-│   ├── controllers/            # 🎮 Controllers - Business logic
+│   ├── controllers/            # Controllers - Business logic
 │   │   ├── AuthController.js   # Authentication logic
 │   │   ├── UserController.js   # User management logic
 │   │   └── TransactionController.js # Transaction management logic
 │   ├── middleware/             # Express middleware
 │   │   └── auth.js            # JWT authentication middleware
-│   ├── models/                 # 📊 Models - Data layer
+│   ├── models/                 # Models - Data layer
 │   │   ├── User.js            # User model with Mongoose
 │   │   └── Transaction.js     # Transaction model with Mongoose
-│   ├── routes/                 # 🛣️ Routes - API endpoints
+│   ├── routes/                 # Routes - API endpoints
 │   │   ├── authRoutes.js      # Auth routes (thin)
 │   │   ├── userRoutes.js      # User routes (thin)
 │   │   └── transactionRoutes.js # Transaction routes (thin)
 │   ├── server.js              # Express server setup
 │   ├── package.json           # Backend dependencies
 │   └── startServer.bat        # Windows start script
-├── frontend/                   # 👁️ Views - React frontend
+├── frontend/                   # Views - React frontend
 │   ├── public/                # Static files
 │   ├── src/
 │   │   ├── components/        # React components
@@ -40,7 +40,7 @@ FYP_Duitku/
 └── README.md
 ```
 
-## 🎯 MVC Pattern Implementation
+##MVC Pattern Implementation
 
 ### **Models** (Data Layer)
 - **Location**: `backend/models/`
@@ -57,7 +57,7 @@ FYP_Duitku/
 - **Purpose**: Handle business logic, process requests, coordinate between models and views
 - **Example**: AuthController for login/register, TransactionController for transaction CRUD operations
 
-## 🚀 Features
+##Features
 
 - **User Authentication** (Register, Login, JWT tokens)
 - **Transaction Management** (Income/Expense tracking with CRUD operations)
@@ -75,22 +75,22 @@ FYP_Duitku/
 - **Responsive UI** (React frontend with modern styling)
 - **MVC Architecture** (Clean code organization)
 
-## Technologies Used
+##Technologies Used
 
 ### Backend
 - Node.js
 - Express.js
 - MongoDB + Mongoose
 - JWT (JSON Web Tokens)
-- bcryptjs (Password hashing)
+- bcryptjs (Password hashing and salt generation)
 
-### Frontend
+###Frontend
 - React.js
 - React Router
 - Context API
 - Axios (HTTP client)
 
-## 📦 Installation & Setup
+##Installation & Setup
 
 ### Prerequisites
 - Node.js (v14 or higher)
@@ -148,7 +148,7 @@ startClient.bat
 - `PUT /api/users/:id` - Update user
 - `DELETE /api/users/:id` - Delete user
 
-## 🎨 Benefits of MVC Architecture
+##Benefits of MVC Architecture
 
 1. **Separation of Concerns** - Each layer has specific responsibilities
 2. **Maintainability** - Easy to locate and modify specific functionality
@@ -156,28 +156,28 @@ startClient.bat
 4. **Testability** - Each layer can be tested independently
 5. **Code Organization** - Clear structure for better team collaboration
 
-## 📝 Usage
+##Usage
 
 1. Start the backend server (http://localhost:5000)
 2. Start the frontend application (http://localhost:3000)
 3. Register a new account or login with existing credentials
 4. Use the sidebar navigation to access:
 
-### 📊 **Transaction Dashboard**
+###**Transaction Dashboard**
    - View your financial summary (Income, Expenses, Balance)
    - Add new transactions (income or expense)
    - Edit existing transactions
    - Delete transactions
    - Organize transactions by categories
 
-### 📋 **Budget Planner**
+###**Budget Planner**
    - Set monthly budgets by category
    - Compare actual spending vs budgets
    - View budget status indicators (On Track, Warning, Over Budget)
    - Copy budgets from previous months
    - Filter budgets by month (past months are view-only)
 
-### 🔔 **Planned Payments**
+###**Planned Payments**
    - Set up recurring monthly payments (bills, loans, subscriptions)
    - Configure due dates and payment amounts
    - Automatic status tracking (Pending, Settled, Overdue)
@@ -187,10 +187,3 @@ startClient.bat
    - **Login notification popup** for unsettled payments
    - **Warning indicators** in navigation for payments due within 3 days
 
-## 🤝 Contributing
-
-This project follows MVC architectural principles. When contributing:
-- Keep routes thin - delegate business logic to controllers
-- Maintain separation of concerns between Models, Views, and Controllers
-- Follow the established folder structure
-- Ensure all functionality remains intact after changes
