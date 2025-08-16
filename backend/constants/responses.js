@@ -54,6 +54,7 @@ export const STANDARD_MESSAGES = {
   UPDATE_FAILED: (entity) => `Failed to update ${entity}`,
   DELETE_FAILED: (entity) => `Failed to delete ${entity}`,
   FETCH_FAILED: (entity) => `Failed to fetch ${entity}`,
+  OPERATION_FAILED: (operation) => `Failed to ${operation}`,
   
   // Auth Messages
   LOGIN_SUCCESS: 'Login successful',

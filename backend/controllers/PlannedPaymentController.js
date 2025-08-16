@@ -7,8 +7,10 @@ import {
     isDueDayInPast,
     getNextMonthDueDate 
 } from "../utils/dateUtils.js";
-import { validatePlannedPaymentCreation, validateBalanceForExpenseSettlement } from "../utils/plannedPaymentValidation.js";
+
 import TransactionHistoryController from "./TransactionHistoryController.js";
+import { PlannedPaymentValidator } from '../validators/plannedPaymentValidator.js';
+import { createSuccessResponse, createErrorResponse, HTTP_STATUS, STANDARD_MESSAGES } from '../constants/responses.js';
 
 class PlannedPaymentController {
     // Create planned payment
@@ -18,72 +20,40 @@ class PlannedPaymentController {
             const userId = req.user._id; // From auth middleware
 
             // Validation
-            if (!title || !amount || !category || !dueDay) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: "Title, amount, category, and due day are required" 
-                });
-            }
-
-            // Validate payment type
-            if (paymentType && !['income', 'expense'].includes(paymentType)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Payment type must be either 'income' or 'expense'"
-                });
-            }
-
-            // Validate title length
-            if (title.trim().length > 40) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Title cannot exceed 40 characters"
-                });
-            }
-
-            if (amount <= 0) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: "Amount must be greater than 0" 
-                });
-            }
-
-            // Validate description length if provided
-            if (description && description.trim().length > 30) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Description cannot exceed 30 characters"
-                });
+            const validation = PlannedPaymentValidator.validateCreate({ title, amount, category, dueDay, paymentType, description });
+            if (!validation.isValid) {
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(createErrorResponse(
+                    validation.errors.join(', ')
+                ));
             }
 
             // Validate due day against actual days in current month
             if (!isValidDueDayForCurrentMonth(dueDay)) {
                 const maxDays = getDaysInCurrentMonth();
-                return res.status(400).json({
-                    success: false,
-                    message: `Due day must be between 1 and ${maxDays} for the current month`
-                });
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(createErrorResponse(
+                    `Due day must be between 1 and ${maxDays} for the current month`
+                ));
             }
 
             // Check for overdue expense planned payments first (pass payment type)
-            const overdueValidation = await validatePlannedPaymentCreation(userId, paymentType);
+            const overdueValidation = await PlannedPaymentValidator.validatePlannedPaymentCreation(userId, paymentType);
             if (!overdueValidation.isValid) {
-                return res.status(400).json({
-                    success: false,
-                    message: overdueValidation.message,
-                    errorType: overdueValidation.errorType,
-                    overduePayments: overdueValidation.overduePayments
-                });
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(createErrorResponse(
+                    overdueValidation.message,
+                    {
+                        errorType: overdueValidation.errorType,
+                        overduePayments: overdueValidation.overduePayments
+                    }
+                ));
             }
 
             // Check if due day is today (current day) - prevent same day planned payments
             const now = new Date();
             const currentDay = now.getDate();
             if (parseInt(dueDay) === currentDay) {
-                return res.status(400).json({
-                    success: false,
-                    message: "You cannot create a planned payment for the current day. Please select a different due day."
-                });
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(createErrorResponse(
+                    "You cannot create a planned payment for the current day. Please select a different due day."
+                ));
             }
 
             // Check if due day is in the past
@@ -151,20 +121,20 @@ class PlannedPaymentController {
             // Calculate next due date for response
             const nextDueDate = isInPast ? getNextMonthDueDate(parseInt(dueDay)) : null;
             
-            res.status(201).json({ 
-                success: true, 
-                message: "Planned payment created successfully", 
-                plannedPayment: newPlannedPayment,
-                autoSettled: isInPast,
-                nextDueDate: nextDueDate,
-                initialTransaction: initialTransaction
-            });
+            res.status(HTTP_STATUS.CREATED).json(createSuccessResponse(
+                STANDARD_MESSAGES.CREATED_SUCCESS('Planned payment'),
+                { 
+                    plannedPayment: newPlannedPayment,
+                    autoSettled: isInPast,
+                    nextDueDate: nextDueDate,
+                    initialTransaction: initialTransaction
+                }
+            ));
         } catch (error) {
             console.error("Error creating planned payment:", error.message);
-            res.status(500).json({ 
-                success: false, 
-                message: "Failed to create planned payment"
-            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(createErrorResponse(
+                STANDARD_MESSAGES.OPERATION_FAILED('create planned payment')
+            ));
         }
     }
 
@@ -257,35 +227,11 @@ class PlannedPaymentController {
             }
 
             // Validation
-            if (amount && amount <= 0) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: "Amount must be greater than 0" 
-                });
-            }
-
-            // Validate payment type if provided
-            if (paymentType && !['income', 'expense'].includes(paymentType)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Payment type must be either 'income' or 'expense'"
-                });
-            }
-
-            // Validate title length if provided
-            if (title && title.trim().length > 40) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Title cannot exceed 40 characters"
-                });
-            }
-
-            // Validate description length if provided
-            if (description !== undefined && description.trim().length > 30) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Description cannot exceed 30 characters"
-                });
+            const validation = PlannedPaymentValidator.validateUpdate({ title, amount, category, dueDay, paymentType, description });
+            if (!validation.isValid) {
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(createErrorResponse(
+                    validation.errors.join(', ')
+                ));
             }
 
             if (dueDay) {
@@ -412,7 +358,7 @@ class PlannedPaymentController {
 
             // Validate balance for expense payments
             if (plannedPayment.paymentType === 'expense') {
-                const balanceValidation = await validateBalanceForExpenseSettlement(userId, plannedPayment.amount);
+                const balanceValidation = await PlannedPaymentValidator.validateBalanceForExpenseSettlement(userId, plannedPayment.amount);
                 if (!balanceValidation.isValid) {
                     return res.status(400).json({
                         success: false,

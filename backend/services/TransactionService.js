@@ -5,7 +5,7 @@
 
 import Transaction from '../models/Transaction.js';
 import Budget from '../models/Budget.js';
-import { validateExpenseTransactionCreation } from '../utils/plannedPaymentValidation.js';
+import { PlannedPaymentValidator } from '../validators/plannedPaymentValidator.js';
 import TransactionHistoryController from '../controllers/TransactionHistoryController.js';
 import { TRANSACTION_TYPES, getCategoriesByType } from '../constants/categories.js';
 import { ERROR_TYPES } from '../constants/responses.js';
@@ -30,7 +30,7 @@ export class TransactionService {
     // Income validation for expense transactions
     if (type === TRANSACTION_TYPES.EXPENSE) {
       // Check for overdue expense planned payments first
-      const overdueValidation = await validateExpenseTransactionCreation(userId);
+      const overdueValidation = await PlannedPaymentValidator.validateExpenseTransactionCreation(userId);
       if (!overdueValidation.isValid) {
         const error = new Error(overdueValidation.message);
         error.type = ERROR_TYPES.OVERDUE_PLANNED_PAYMENTS;
@@ -86,9 +86,6 @@ export class TransactionService {
         source: 'MANUAL'
       }
     });
-    
-    // Populate user info for response
-    await newTransaction.populate('user', 'name email');
     
     return newTransaction;
   }
@@ -240,7 +237,7 @@ export class TransactionService {
     
     if (transactionType === TRANSACTION_TYPES.EXPENSE) {
       // Check for overdue expense planned payments first
-      const overdueValidation = await validateExpenseTransactionCreation(userId);
+      const overdueValidation = await PlannedPaymentValidator.validateExpenseTransactionCreation(userId);
       if (!overdueValidation.isValid) {
         const error = new Error(overdueValidation.message);
         error.type = ERROR_TYPES.OVERDUE_PLANNED_PAYMENTS;

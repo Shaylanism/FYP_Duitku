@@ -14,7 +14,7 @@ const budgetSchema = new mongoose.Schema({
     budgetAmount: {
         type: Number,
         required: true,
-        min: 0.01
+        min: 0.05
     },
     month: {
         type: String,

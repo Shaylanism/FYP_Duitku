@@ -1,6 +1,8 @@
 import Budget from "../models/Budget.js";
 import Transaction from "../models/Transaction.js";
 import mongoose from "mongoose";
+import { BudgetValidator } from '../validators/budgetValidator.js';
+import { createSuccessResponse, createErrorResponse, HTTP_STATUS, STANDARD_MESSAGES } from '../constants/responses.js';
 
 class BudgetController {
     // Create budget
@@ -10,36 +12,11 @@ class BudgetController {
             const userId = req.user._id; // From auth middleware
 
             // Validation
-            if (!category || !budgetAmount || !month) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: "Category, budget amount, and month are required" 
-                });
-            }
-
-            if (budgetAmount <= 0) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: "Budget amount must be greater than 0" 
-                });
-            }
-
-            // Validate month format (YYYY-MM)
-            const monthRegex = /^\d{4}-\d{2}$/;
-            if (!monthRegex.test(month)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Month must be in YYYY-MM format"
-                });
-            }
-
-            // Only allow budget creation for current month or future months
-            const currentMonth = new Date().toISOString().slice(0, 7);
-            if (month < currentMonth) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Cannot create budgets for past months. You can only set budgets for the current month or future months."
-                });
+            const validation = BudgetValidator.validateCreate({ category, budgetAmount, month });
+            if (!validation.isValid) {
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(createErrorResponse(
+                    validation.errors.join(', ')
+                ));
             }
 
             // Create new budget
@@ -55,26 +32,23 @@ class BudgetController {
             // Populate user info for response
             await newBudget.populate('user', 'name email');
             
-            res.status(201).json({ 
-                success: true, 
-                message: "Budget created successfully", 
-                budget: newBudget 
-            });
+            res.status(HTTP_STATUS.CREATED).json(createSuccessResponse(
+                STANDARD_MESSAGES.CREATED_SUCCESS('Budget'),
+                { budget: newBudget }
+            ));
         } catch (error) {
             console.error("Error creating budget:", error.message);
             
             // Handle duplicate key error (budget already exists for this category/month/user)
             if (error.code === 11000) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Budget already exists for this category in the selected month"
-                });
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(createErrorResponse(
+                    "Budget already exists for this category in the selected month"
+                ));
             }
             
-            res.status(500).json({ 
-                success: false, 
-                message: "Failed to create budget"
-            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(createErrorResponse(
+                STANDARD_MESSAGES.OPERATION_FAILED('create budget')
+            ));
         }
     }
 
@@ -238,31 +212,11 @@ class BudgetController {
             }
 
             // Validation
-            if (budgetAmount && budgetAmount <= 0) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: "Budget amount must be greater than 0" 
-                });
-            }
-
-            // Validate month format if provided
-            if (month) {
-                const monthRegex = /^\d{4}-\d{2}$/;
-                if (!monthRegex.test(month)) {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Month must be in YYYY-MM format"
-                    });
-                }
-
-                // Only allow budget updates for current month or future months
-                const currentMonth = new Date().toISOString().slice(0, 7);
-                if (month < currentMonth) {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Cannot modify budgets for past months. You can only edit budgets for the current month or future months."
-                    });
-                }
+            const validation = BudgetValidator.validateUpdate({ category, budgetAmount, month });
+            if (!validation.isValid) {
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(createErrorResponse(
+                    validation.errors.join(', ')
+                ));
             }
 
             // Find budget and ensure it belongs to the user

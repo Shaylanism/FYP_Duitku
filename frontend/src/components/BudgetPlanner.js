@@ -478,7 +478,7 @@ function BudgetPlanner() {
                       placeholder="0.00"
                       value={form.budgetAmount}
                       onChange={handleChange}
-                      min="0.01"
+                      min="0.05"
                       step="0.01"
                       required
                       className="banking-input pl-12"

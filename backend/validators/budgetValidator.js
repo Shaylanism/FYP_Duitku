@@ -20,7 +20,7 @@ export class BudgetValidator {
 
     // Budget amount validation
     if (budgetAmount !== undefined && (isNaN(budgetAmount) || parseFloat(budgetAmount) < VALIDATION_LIMITS.BUDGET.MIN_AMOUNT)) {
-      errors.push(ERROR_MESSAGES.INVALID_AMOUNT);
+      errors.push(ERROR_MESSAGES.INVALID_BUDGET_AMOUNT);
     }
 
     // Month format validation
@@ -48,7 +48,7 @@ export class BudgetValidator {
 
     // Budget amount validation (if provided)
     if (budgetAmount !== undefined && (isNaN(budgetAmount) || parseFloat(budgetAmount) < VALIDATION_LIMITS.BUDGET.MIN_AMOUNT)) {
-      errors.push(ERROR_MESSAGES.INVALID_AMOUNT);
+      errors.push(ERROR_MESSAGES.INVALID_BUDGET_AMOUNT);
     }
 
     // Month format validation (if provided)
@@ -80,8 +80,8 @@ export class BudgetValidator {
     }
 
     // Amount validation (if provided)
-    if (amount !== undefined && (isNaN(amount) || parseFloat(amount) <= 0)) {
-      errors.push(ERROR_MESSAGES.INVALID_AMOUNT);
+    if (amount !== undefined && (isNaN(amount) || parseFloat(amount) < VALIDATION_LIMITS.BUDGET.MIN_AMOUNT)) {
+      errors.push(ERROR_MESSAGES.INVALID_BUDGET_AMOUNT);
     }
 
     return {
