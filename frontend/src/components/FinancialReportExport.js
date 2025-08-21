@@ -252,7 +252,6 @@ const FinancialReportExport = () => {
       // Use appropriate jsPDF and autoTable based on selected method
       const PDFClass = useAlternativeMethod ? dynamicLibraries.jsPDF : jsPDF;
       const tableFunction = useAlternativeMethod ? dynamicLibraries.autoTable : autoTable;
-      
 
       
       // Validate the constructor before using it
@@ -272,8 +271,7 @@ const FinancialReportExport = () => {
       month: 'long'
     });
     
-    // Professional Header Design
-    // Company/Title Header
+    // PDF Design
     doc.setFillColor(...COLORS.GOLD); // Gold color
     doc.rect(0, 0, 210, 12, 'F'); // Gold header bar
     
@@ -406,7 +404,7 @@ const FinancialReportExport = () => {
         formatCurrency(transaction.amount)
       ]);
 
-      // Professional table styling with footer protection
+      // Table Styling with Footer Protection
       tableFunction(doc, createTableConfig({
         head: [['DATE', 'DESCRIPTION', 'CATEGORY', 'AMOUNT']],
         body: tableData,
@@ -424,16 +422,16 @@ const FinancialReportExport = () => {
             const transaction = previewData.transactions[rowIndex];
             if (transaction) {
               if (transaction.type === 'income') {
-                data.cell.styles.textColor = COLORS.GREEN; // Green for income
+                data.cell.styles.textColor = COLORS.GREEN; // Green For Income
               } else {
-                data.cell.styles.textColor = COLORS.RED; // Red for expense
+                data.cell.styles.textColor = COLORS.RED; // Red For Expense
               }
             }
           }
         }
       }));
     } else {
-      // No transactions message - professional styling
+      // No Transactions Message
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(218, 165, 32); // Gold
@@ -447,7 +445,7 @@ const FinancialReportExport = () => {
       doc.setTextColor(0, 0, 0); // Reset to black
     }
 
-    // Budget Breakdown Section - Always check independently
+    // Budget Breakdown Section
     if (previewData.budgets && Array.isArray(previewData.budgets) && previewData.budgets.length > 0) {
       console.log('Adding Budget Breakdown section to PDF:', previewData.budgets.length, 'categories');
       doc.addPage();
@@ -501,7 +499,7 @@ const FinancialReportExport = () => {
       }));
     }
 
-    // Planned Payments Section - Always check independently
+    // Planned Payments Section
     if (previewData.plannedPayments && Array.isArray(previewData.plannedPayments) && previewData.plannedPayments.length > 0) {
       console.log('Adding Planned Payments section to PDF:', previewData.plannedPayments.length, 'payments');
       doc.addPage();
@@ -548,9 +546,8 @@ const FinancialReportExport = () => {
       }));
     }
 
-      // Sections moved above
 
-    // Transaction History (Audit Trail) Section - Always check independently if enabled
+    // Transaction History (Audit Trail) Section
     if (includeTransactionHistory && previewData.transactionHistory && Array.isArray(previewData.transactionHistory) && previewData.transactionHistory.length > 0) {
       console.log('Adding transaction history to PDF:', previewData.transactionHistory.length, 'entries');
       doc.addPage();
@@ -630,7 +627,7 @@ const FinancialReportExport = () => {
         }
       }));
     } else if (includeTransactionHistory) {
-      // Add a page indicating no transaction history found
+      // Adds a page indicating no transaction history found
       doc.addPage();
       
       doc.setFontSize(14);
